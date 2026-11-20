@@ -76,6 +76,58 @@ export function KpiStrip({ items }: { items: { label: string; value: string }[] 
   );
 }
 
+/**
+ * A row of tabs with a count on each, e.g. "Completed 4".
+ * The active tab has a thick olive underline; the row scrolls sideways on phones.
+ */
+export function Tabs<T extends string>({
+  tabs,
+  active,
+  onChange,
+  label,
+}: {
+  tabs: { id: T; label: string; count?: number }[];
+  active: T;
+  onChange: (id: T) => void;
+  label: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      className="flex overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_var(--color-moss-200)]"
+    >
+      {tabs.map((t) => {
+        const selected = t.id === active;
+        return (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(t.id)}
+            className={`flex shrink-0 items-center gap-2 border-b-[3px] px-4 py-2.5 text-[13px] whitespace-nowrap ${
+              selected
+                ? 'border-moss-600 bg-white font-semibold text-moss-900'
+                : 'border-transparent text-moss-600 hover:border-moss-300 hover:text-moss-900'
+            }`}
+          >
+            {t.label}
+            {t.count !== undefined && (
+              <span
+                className={`num min-w-5 px-1 text-center text-[11px] ${
+                  selected ? 'bg-moss-800 text-moss-50' : 'bg-moss-100 text-moss-700'
+                }`}
+              >
+                {t.count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Shared table styles: dense rows, shaded header, hairline dividers. */
 export const table = 'w-full border-collapse text-[13px]';
 export const th = 'whitespace-nowrap bg-moss-100 px-3 py-1.5 text-left text-[11px] font-medium text-moss-700';

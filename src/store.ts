@@ -12,11 +12,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { seed, seedAllocations, seedCostLines } from './data/seed';
-import type { Allocation, CostLine, ProposedHire, Role, RoiModel, RoiYear, SeedData } from './data/types';
+import type { Allocation, CostLine, Granularity, ProposedHire, RevenuePlan, Role, RoiModel, RoiYear, SeedData } from './data/types';
 import { peopleForRole } from './data/access';
 import { MAX_YEARS, MIN_YEARS, computeRoi, createDefaultRoiModel, seedRoiModels } from './data/roi';
 import { currentStep, hireCostsForModel, nextStatus } from './data/resourcing';
+import { applyRevenuePlan, convertGranularity, createRevenuePlan, enteredForYear, seedRevenuePlans } from './data/revenue';
 import type { RoiLookup } from './data/rollup';
+
+const seededModels = seedRoiModels(seed.projects);
 
 const today = () => new Date().toISOString().slice(0, 10);
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}`;
@@ -33,6 +36,8 @@ interface AppState {
   hires: ProposedHire[];
   /** Whether hires still awaiting approval count in ROI and forecasts. */
   includePendingHires: boolean;
+  /** Sales' revenue plan per project id. */
+  revenuePlans: Record<string, RevenuePlan>;
 
   setRole: (role: Role) => void;
   setActingAs: (personId: string) => void;
@@ -48,6 +53,11 @@ interface AppState {
   proposeHire: (hire: Pick<ProposedHire, 'projectId' | 'departmentId' | 'startDate' | 'hours'>) => void;
   decideHire: (hireId: string, approve: boolean) => void;
   setIncludePendingHires: (include: boolean) => void;
+
+  createRevenuePlan: (projectId: string) => void;
+  updateRevenuePlan: (projectId: string, patch: Partial<Omit<RevenuePlan, 'projectId' | 'unitsByPeriod' | 'granularity'>>) => void;
+  setPlanUnits: (projectId: string, periodKey: string, value: number) => void;
+  setPlanGranularity: (projectId: string, granularity: Granularity, years: number[]) => void;
 }
 
 export const useApp = create<AppState>()(
@@ -64,11 +74,12 @@ export const useApp = create<AppState>()(
         data: seed,
         role: 'Leadership',
         actingAsId: 'ldr-ceo',
-        roiModels: seedRoiModels(seed.projects),
+        roiModels: seededModels,
         allocations: seedAllocations,
         costLines: seedCostLines,
         hires: seed.hires,
         includePendingHires: true,
+        revenuePlans: seedRevenuePlans(seed.projects, seededModels),
 
         setRole: (role) => set({ role, actingAsId: peopleForRole(get().data, role)[0]?.id ?? '' }),
         setActingAs: (actingAsId) => set({ actingAsId }),
@@ -130,12 +141,43 @@ export const useApp = create<AppState>()(
           }),
 
         setIncludePendingHires: (includePendingHires) => set({ includePendingHires }),
+
+        createRevenuePlan: (projectId) => {
+          const project = get().data.projects.find((p) => p.id === projectId);
+          if (!project || get().revenuePlans[projectId]) return;
+          set({ revenuePlans: { ...get().revenuePlans, [projectId]: createRevenuePlan(project, get().roiModels[projectId]) } });
+        },
+        updateRevenuePlan: (projectId, patch) => {
+          const plan = get().revenuePlans[projectId];
+          if (plan) set({ revenuePlans: { ...get().revenuePlans, [projectId]: { ...plan, ...patch } } });
+        },
+        setPlanUnits: (projectId, periodKey, value) => {
+          const plan = get().revenuePlans[projectId];
+          if (!plan) return;
+          set({
+            revenuePlans: {
+              ...get().revenuePlans,
+              [projectId]: { ...plan, unitsByPeriod: { ...plan.unitsByPeriod, [periodKey]: Math.max(0, Math.round(value)) } },
+            },
+          });
+        },
+        setPlanGranularity: (projectId, granularity, years) => {
+          const plan = get().revenuePlans[projectId];
+          if (!plan || plan.granularity === granularity) return;
+          set({
+            revenuePlans: {
+              ...get().revenuePlans,
+              [projectId]: { ...plan, granularity, unitsByPeriod: convertGranularity(plan, granularity, years) },
+            },
+          });
+        },
       };
     },
     {
       name: 'rdpp-session',
-      version: 4,
+      version: 5,
       partialize: (s) => ({
+        revenuePlans: s.revenuePlans,
         role: s.role,
         actingAsId: s.actingAsId,
         roiModels: s.roiModels,
@@ -155,23 +197,59 @@ export const useApp = create<AppState>()(
           costLines: s.costLines ?? seedCostLines,
           hires: s.hires ?? seed.hires,
           includePendingHires: s.includePendingHires ?? true,
+          // Version 5 added sales revenue plans.
+          revenuePlans: s.revenuePlans ?? seedRevenuePlans(seed.projects, seededModels),
         } as AppState;
       },
     },
   ),
 );
 
+type ModelState = Pick<AppState, 'data' | 'roiModels' | 'revenuePlans'>;
+
+/** A hardware project's units for the given years: from its sales plan, or else its ROI model. */
+function unitsForYears(state: ModelState, projectId: string, years: number[]): number[] {
+  const plan = state.revenuePlans[projectId];
+  if (plan && plan.recurringMode !== 'linked-to-hardware') return years.map((y) => enteredForYear(plan, y));
+  const model = state.roiModels[projectId];
+  return years.map((y) => (model ? (model.years[y - model.startYear]?.units ?? 0) : 0));
+}
+
 /**
- * Returns a function that gives a project's ROI result, including its hires'
- * costs (pending ones only when "Include pending hires" is on).
+ * The ROI model as actually used: if Sales has a revenue plan for the
+ * project, its units and price replace the ones typed into the model.
+ */
+export function effectiveModel(state: ModelState, projectId: string): RoiModel | undefined {
+  const model = state.roiModels[projectId];
+  const plan = state.revenuePlans[projectId];
+  const project = state.data.projects.find((p) => p.id === projectId);
+  if (!model || !plan || !project) return model;
+  const years = model.years.map((_, i) => model.startYear + i);
+  const hardware = plan.linkedHardwareProjectId ? unitsForYears(state, plan.linkedHardwareProjectId, years) : [];
+  return applyRevenuePlan(model, plan, project, hardware);
+}
+
+/** Linked plans need the hardware units for the plan's years. */
+export function useHardwareUnits(): (projectId: string, years: number[]) => number[] {
+  const data = useApp((s) => s.data);
+  const roiModels = useApp((s) => s.roiModels);
+  const revenuePlans = useApp((s) => s.revenuePlans);
+  return (projectId, years) => unitsForYears({ data, roiModels, revenuePlans }, projectId, years);
+}
+
+/**
+ * Returns a function that gives a project's ROI result: units and price from
+ * its sales plan (if any), plus its hires' costs (pending ones only when
+ * "Include pending hires" is on).
  */
 export function useRoiFor(): RoiLookup {
   const data = useApp((s) => s.data);
   const roiModels = useApp((s) => s.roiModels);
+  const revenuePlans = useApp((s) => s.revenuePlans);
   const hires = useApp((s) => s.hires);
   const includePending = useApp((s) => s.includePendingHires);
   return (projectId) => {
-    const model = roiModels[projectId];
+    const model = effectiveModel({ data, roiModels, revenuePlans }, projectId);
     const project = data.projects.find((p) => p.id === projectId);
     if (!model || !project) return null;
     return computeRoi(model, hireCostsForModel(project, model, hires, data.departments, includePending));

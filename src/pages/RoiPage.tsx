@@ -10,7 +10,7 @@ import { canEditRoi, visibleProjects } from '../data/access';
 import { durationMonths, formatDate, formatDay, personName, scheduleStatus } from '../data/model';
 import { MAX_YEARS, MIN_YEARS, formatK, type RoiResult, type RoiRow } from '../data/roi';
 import type { Project, RoiModel, RoiYear } from '../data/types';
-import { useApp, useRoiFor } from '../store';
+import { effectiveModel, useApp, useRoiFor } from '../store';
 import { HiresToggle } from '../components/Filters';
 import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
 import { PhaseTabs, usePhaseTab, withPhase } from '../components/PhaseTabs';
@@ -302,6 +302,8 @@ interface RowDef {
   strong?: boolean;
   rule?: boolean;
   negate?: boolean;
+  /** Shown from the sales plan instead of typed in here. */
+  fromPlan?: boolean;
 }
 
 function fmt(v: number, f: Format): string {
@@ -322,14 +324,19 @@ function fmt(v: number, f: Format): string {
 }
 
 function CashFlowTable({ project, model, result, canEdit }: { project: Project; model: RoiModel; result: RoiResult; canEdit: boolean }) {
-  const { updateRoiYear } = useApp();
+  const state = useApp();
+  const { updateRoiYear } = state;
   const revenue = project.type === 'revenue';
+  // With a sales plan, units and price come from Sales (one shared model).
+  const plan = state.revenuePlans[project.id];
+  const effective = effectiveModel(state, project.id) ?? model;
+  const unitsLabel = plan?.recurringMode && plan.recurringMode !== 'none' ? 'Active subscribers' : 'Units sold';
 
   const rows: RowDef[] = [
     ...(revenue
       ? [
-          { label: 'Units sold', input: 'units', format: 'int', total: true },
-          { label: 'Price per unit ($)', input: 'price', format: 'price', total: false },
+          { label: plan ? `${unitsLabel} · from sales plan` : 'Units sold', input: 'units', format: 'int', total: true, fromPlan: !!plan },
+          { label: plan ? 'Price per unit ($) · from sales plan' : 'Price per unit ($)', input: 'price', format: 'price', total: false, fromPlan: !!plan },
           { label: 'Revenue', calc: 'revenue', format: 'money', total: true },
           { label: 'Gross margin (%)', input: 'marginPct', format: 'pct', total: false },
           { label: 'Cost of goods sold', calc: 'cogs', format: 'money', total: true, negate: true },
@@ -375,7 +382,9 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
           </thead>
           <tbody>
             {rows.map((row) => {
-              const values = result.rows.map((r, i) => (row.input ? model.years[i][row.input] : (r[row.calc!] as number)));
+              const values = result.rows.map((r, i) =>
+                row.input ? (row.fromPlan ? effective : model).years[i][row.input] : (r[row.calc!] as number),
+              );
               const total = values.reduce((s, v) => s + v, 0);
               const rule = row.rule ? 'border-t border-t-moss-300' : '';
               return (
@@ -383,7 +392,7 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
                   <td className={`${td} ${rule} sticky left-0 bg-white whitespace-nowrap ${row.strong ? 'font-semibold' : ''}`}>{row.label}</td>
                   {values.map((v, i) => (
                     <td key={i} className={`${td} ${rule} num ${right} whitespace-nowrap ${row.strong ? 'font-semibold' : ''}`}>
-                      {row.input && canEdit ? (
+                      {row.input && canEdit && !row.fromPlan ? (
                         <NumberInput
                           ariaLabel={`${row.label}, ${model.startYear + i}`}
                           value={v}
@@ -392,7 +401,7 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
                           onChange={(nv) => updateRoiYear(project.id, i, { [row.input!]: nv })}
                         />
                       ) : (
-                        <span className={row.input ? 'text-slateblue' : ''}>{fmt(shownAsOutflow(row) ? -v : v, row.format)}</span>
+                        <span className={row.input && !row.fromPlan ? 'text-slateblue' : ''}>{fmt(shownAsOutflow(row) ? -v : v, row.format)}</span>
                       )}
                     </td>
                   ))}

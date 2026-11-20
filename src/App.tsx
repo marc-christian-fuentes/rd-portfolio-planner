@@ -14,6 +14,7 @@ import ForecastPage from './pages/ForecastPage';
 import RoadmapPage from './pages/RoadmapPage';
 import ResourcingPage from './pages/ResourcingPage';
 import CapacityPage from './pages/CapacityPage';
+import SalesPage from './pages/SalesPage';
 import AdminPage from './pages/AdminPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import { canSee, homePath, type SectionId } from './data/access';
@@ -56,7 +57,7 @@ export default function App() {
           <Route path="/resourcing" element={page('resourcing', <ResourcingPage />)} />
           <Route path="/capacity" element={page('capacity', <CapacityPage />)} />
 
-          <Route path="/sales" element={placeholder('sales')} />
+          <Route path="/sales" element={page('sales', <SalesPage />)} />
           <Route path="/assumptions" element={placeholder('assumptions')} />
           <Route path="/admin" element={page('admin', <AdminPage />)} />
           <Route path="*" element={<Navigate to="/" replace />} />

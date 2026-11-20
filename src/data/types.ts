@@ -181,15 +181,27 @@ export interface CostLine {
   granularity: Granularity;
 }
 
+/**
+ * How a revenue plan counts sales:
+ * - none: one-off unit sales (e.g. hardware). Units are entered.
+ * - linked-to-hardware: subscriptions or warranty sold with a hardware
+ *   product. Subscribers = hardware units × attach rate, and each yearly
+ *   renewal keeps the retention share.
+ * - standalone: subscriptions sold on their own. Active subscribers are entered.
+ */
+export type RecurringMode = 'none' | 'linked-to-hardware' | 'standalone';
+
+/** Sales' revenue plan for one project (spec section 5). */
 export interface RevenuePlan {
-  id: string;
   projectId: string;
   granularity: Granularity;
+  /** Units (or active subscribers) per period, keyed "2027", "2027-Q1" or "2027-01". */
   unitsByPeriod: Record<string, number>;
+  /** Sales' price per unit; null = the project's default price. */
   priceOverride: number | null;
-  recurringMode: 'none' | 'linked-to-hardware' | 'standalone';
-  attachRatePct: number | null;
-  retentionPct: number | null;
+  recurringMode: RecurringMode;
+  attachRatePct: number;
+  retentionPct: number;
   linkedHardwareProjectId: string | null;
 }
 

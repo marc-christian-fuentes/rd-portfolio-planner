@@ -21,7 +21,8 @@
 - **Project management**
   - Costs & resourcing: allocate people to projects, see staffing gaps, propose hires (Director → CTO → Finance approval), plan non-labour costs.
   - Capacity: utilisation by department and person.
-- **Quarterly planning, Unit cost builder, Sales pipeline**: coming in later steps.
+- **Sales pipeline**: projects from Proposed onwards as a progress board; revenue plans by month, quarter or year with price overrides, and recurring subscriptions or warranty linked to hardware (attach and retention). Plans feed units and price into each project's ROI model.
+- **Quarterly planning, Unit cost builder**: coming in later steps.
 
 ## Where things live
 
@@ -39,7 +40,7 @@
 - [x] 2. Role switcher and app layout
 - [x] 3. Portfolio views, ROI calculator, forecast and roadmap
 - [x] 4. Costs, resourcing and proposed hires
-- [ ] 5. Sales revenue (recurring and warranty)
+- [x] 5. Sales revenue (recurring and warranty)
 - [ ] 6. Quarterly planning (Rank by comparing)
 - [ ] 7. Manufacturing unit cost builder
 - [ ] 8. Assumptions, admin, comments and inbox

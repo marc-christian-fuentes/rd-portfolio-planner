@@ -7,7 +7,7 @@
  */
 import { useNavigate, useParams } from 'react-router-dom';
 import { canEditRoi, visibleProjects } from '../data/access';
-import { personName } from '../data/model';
+import { durationMonths, formatDate, formatDay, personName, scheduleStatus } from '../data/model';
 import { MAX_YEARS, MIN_YEARS, computeRoi, formatK, type RoiResult, type RoiRow } from '../data/roi';
 import type { Project, RoiModel, RoiYear } from '../data/types';
 import { useApp } from '../store';
@@ -36,7 +36,11 @@ export default function RoiPage() {
           selected && (
             <span className="text-[13px] text-moss-600">
               <span className="font-semibold text-moss-900">{selected.name}</span>
-              <span className="num"> · NPV {selectedModel ? formatK(computeRoi(selectedModel).npv) : 'no model yet'}</span>
+              <span className="num">
+                {' '}
+                · {formatDate(selected.startDate)} – {formatDate(selected.endDate)} · NPV{' '}
+                {selectedModel ? formatK(computeRoi(selectedModel).npv) : 'no model yet'}
+              </span>
             </span>
           )
         }
@@ -109,6 +113,8 @@ function ProjectRoi({ project }: { project: Project }) {
         )}
       </div>
 
+      <Schedule project={project} />
+
       {!model ? (
         <div className="rounded-[10px] border border-dashed border-moss-300 bg-white px-4 py-5 text-[13px] text-moss-700">
           <p className="mb-3">This project has no ROI model yet.</p>
@@ -129,6 +135,55 @@ function ProjectRoi({ project }: { project: Project }) {
         <ModelView project={project} model={model} canEdit={canEdit} />
       )}
     </section>
+  );
+}
+
+/** Start, (expected) completion, duration and how far through the schedule the project is. */
+function Schedule({ project }: { project: Project }) {
+  const s = scheduleStatus(project);
+  const startLabel = s.notStarted ? 'Planned start' : 'Started';
+  const endLabel = s.done ? 'Completed' : 'Expected completion';
+  const progressText = s.done
+    ? 'Done'
+    : s.notStarted
+      ? 'Not started yet'
+      : s.overdue
+        ? 'Past expected completion'
+        : `${s.elapsedPct}% of schedule elapsed · ${s.monthsLeft} month${s.monthsLeft === 1 ? '' : 's'} left`;
+
+  const item = 'min-w-0';
+  const label = 'text-[12px] text-moss-500';
+  const value = 'num mt-0.5 text-[15px] font-semibold text-moss-900';
+
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-3 rounded-[10px] border border-moss-200 bg-white px-4 py-3 md:grid-cols-[repeat(3,auto)_minmax(0,1fr)]">
+      <div className={item}>
+        <div className={label}>{startLabel}</div>
+        <div className={value}>{formatDay(project.startDate)}</div>
+      </div>
+      <div className={item}>
+        <div className={label}>{endLabel}</div>
+        <div className={value}>{formatDay(project.endDate)}</div>
+      </div>
+      <div className={item}>
+        <div className={label}>Duration</div>
+        <div className={value}>{durationMonths(project)} months</div>
+      </div>
+      <div className={`${item} col-span-2 md:col-span-1`}>
+        <div className={label}>Progress</div>
+        <div
+          className="mt-1.5 h-2 overflow-hidden rounded-full bg-moss-100"
+          role="progressbar"
+          aria-valuenow={s.elapsedPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Share of schedule elapsed"
+        >
+          <div className={`h-full rounded-full ${s.overdue ? 'bg-rust' : 'bg-moss-600'}`} style={{ width: `${s.elapsedPct}%` }} />
+        </div>
+        <div className={`mt-1 text-[12px] ${s.overdue ? 'text-rust' : 'text-moss-600'}`}>{progressText}</div>
+      </div>
+    </div>
   );
 }
 

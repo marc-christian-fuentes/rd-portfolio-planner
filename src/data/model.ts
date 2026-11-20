@@ -54,6 +54,25 @@ export function formatMoney(value: number): string {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
 
+/** "2025-10-01" → "Oct 1, 2025". */
+export function formatDay(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/** Where a project is in its schedule, as of today. */
+export function scheduleStatus(project: Project, today = new Date()) {
+  const start = new Date(`${project.startDate}T00:00:00`);
+  const end = new Date(`${project.endDate}T23:59:59`);
+  const now = today.getTime();
+  const done = project.phase === 'Completed';
+  const notStarted = now < start.getTime() && !done;
+  const elapsed = done ? 1 : Math.min(1, Math.max(0, (now - start.getTime()) / (end.getTime() - start.getTime())));
+  const monthsLeft = done || now >= end.getTime() ? 0 : Math.ceil((end.getTime() - Math.max(now, start.getTime())) / (1000 * 60 * 60 * 24 * 30.44));
+  const overdue = !done && now > end.getTime();
+  return { done, notStarted, overdue, elapsedPct: Math.round(elapsed * 100), monthsLeft };
+}
+
 export function formatDate(iso: string): string {
   const [y, m] = iso.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });

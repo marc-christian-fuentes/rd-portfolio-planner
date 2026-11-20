@@ -9,6 +9,7 @@ import type { Person, Project, Role, SeedData } from './types';
 
 export type SectionId =
   | 'portfolio'
+  | 'roi'
   | 'resourcing'
   | 'capacity'
   | 'sales'
@@ -29,6 +30,7 @@ export interface Section {
 
 export const SECTIONS: Section[] = [
   { id: 'portfolio', label: 'Portfolio', path: '/', step: '7.3', description: 'All product platforms and projects, with phase, type and ROI. Drill down to the ROI calculator.' },
+  { id: 'roi', label: 'ROI calculator', path: '/roi', step: '7.3', description: 'A multi-year cash flow model per project. NPV, ROI, IRR and payback update live as you type, discounted at WACC with mid-year timing.' },
   { id: 'resourcing', label: 'Costs & resourcing', path: '/resourcing', step: '7.4', description: 'Itemise costs, assign people to projects, and turn capacity gaps into proposed hires.' },
   { id: 'capacity', label: 'Capacity', path: '/capacity', step: '7.4', description: 'Utilisation by department and person across all projects.' },
   { id: 'sales', label: 'Sales pipeline', path: '/sales', step: '7.5', description: 'Projects from Proposed onwards as a pipeline board, with revenue planning, recurring revenue and warranty.' },
@@ -44,6 +46,7 @@ export type Access = 'edit' | 'view';
 /** The role visibility matrix: which sections each role can see or edit. Missing = hidden. */
 export const ACCESS: Record<SectionId, Partial<Record<Role, Access>>> = {
   portfolio: { Leadership: 'view', CTO: 'view', Finance: 'view', 'Product Manager': 'edit', 'Project Manager': 'view' },
+  roi: { Leadership: 'view', CTO: 'view', Finance: 'view', 'Product Manager': 'edit', 'Project Manager': 'view' },
   resourcing: { Leadership: 'edit', CTO: 'edit', Finance: 'edit', 'Project Manager': 'edit' },
   capacity: { Leadership: 'view', CTO: 'view', Finance: 'view', 'Project Manager': 'view' },
   sales: { Leadership: 'view', CTO: 'view', Finance: 'view', Sales: 'edit' },
@@ -84,6 +87,11 @@ export const ROLE_SUMMARY: Record<Role, string> = {
   Finance: 'Sees everything. Gives final approval on hires and owns the assumptions.',
   Admin: 'Manages users, role visibility and (mock) integrations.',
 };
+
+/** Only the product manager who owns a project can create or edit its ROI model. */
+export function canEditRoi(role: Role, personId: string, project: Project): boolean {
+  return role === 'Product Manager' && project.ownerId === personId;
+}
 
 /** Whether a role may see cost figures at all. */
 export function canSeeCosts(role: Role): boolean {

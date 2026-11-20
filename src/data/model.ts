@@ -45,6 +45,11 @@ export function durationMonths(project: Project): number {
   return (ey - sy) * 12 + (em - sm) + 1;
 }
 
+/** Hires not yet fully approved or rejected. */
+export function isPendingHire(status: string): boolean {
+  return status !== 'Approved' && status !== 'Rejected';
+}
+
 export function formatMoney(value: number): string {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
@@ -66,7 +71,7 @@ export function checkSeed(data: SeedData): { checks: number; problems: string[] 
     if (!ok) problems.push(message);
   };
 
-  const allIds = [...data.platforms, ...data.departments, ...data.people, ...data.projects].map((x) => x.id);
+  const allIds = [...data.platforms, ...data.departments, ...data.people, ...data.projects, ...data.hires].map((x) => x.id);
   check(new Set(allIds).size === allIds.length, 'Some records share the same id.');
   check(data.platforms.length === 3, `Expected 3 platforms, found ${data.platforms.length}.`);
 
@@ -97,6 +102,11 @@ export function checkSeed(data: SeedData): { checks: number; problems: string[] 
     if (person.kind === 'resource') {
       check(personById(data, person.managerId)?.kind === 'project-manager', `${person.name}: must report to a project manager.`);
     }
+  }
+
+  for (const h of data.hires) {
+    check(data.projects.some((p) => p.id === h.projectId), `Hire ${h.id}: unknown project.`);
+    check(data.departments.some((d) => d.id === h.departmentId), `Hire ${h.id}: unknown department.`);
   }
 
   return { checks, problems };

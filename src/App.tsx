@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import PortfolioPage from './pages/PortfolioPage';
 import AdminPage from './pages/AdminPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import RoiPage from './pages/RoiPage';
 import { canSee, homePath, type SectionId } from './data/access';
 import { useApp } from './store';
 
@@ -24,6 +25,8 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Guard section="portfolio"><PortfolioPage /></Guard>} />
+          <Route path="/roi" element={<Guard section="roi"><RoiPage /></Guard>} />
+          <Route path="/roi/:projectId" element={<Guard section="roi"><RoiPage /></Guard>} />
           <Route path="/resourcing" element={<Guard section="resourcing"><PlaceholderPage section="resourcing" /></Guard>} />
           <Route path="/capacity" element={<Guard section="capacity"><PlaceholderPage section="capacity" /></Guard>} />
           <Route path="/sales" element={<Guard section="sales"><PlaceholderPage section="sales" /></Guard>} />

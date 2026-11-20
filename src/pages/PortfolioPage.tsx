@@ -1,122 +1,107 @@
 /**
  * Portfolio overview (landing page).
- * Projects are split into phase tabs, newest-progress first:
- * Completed (default, far left) → Testing / Validation → In Development → Approved → Proposed.
- * The chosen tab is kept in the web address (?phase=...), so a link opens the same tab.
- * ROI figures and drill-down arrive in step 7.3.
+ * A KPI strip, then a pipeline board: one column per phase, side by side,
+ * in the shared phase order (Completed → Proposed). Each card opens that
+ * project's ROI calculator. Columns wrap onto new rows on narrow screens,
+ * so nothing scrolls sideways.
  */
-import { useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { visibleProjects } from '../data/access';
+import { isPendingHire, isPlatformLaunched } from '../data/model';
+import { computeRoi, formatK } from '../data/roi';
 import type { Phase } from '../data/types';
-import { durationMonths, formatDate, formatMoney, isPlatformLaunched, personName } from '../data/model';
 import { useApp } from '../store';
-import { KpiStrip, PageHeader, Panel, Tabs, Tag, right, table, td, th } from '../components/ui';
+import { KpiStrip, PageHeader } from '../components/ui';
+import { PHASE_TABS } from '../components/PhaseTabs';
 
-/** Tab order, left to right. */
-const PHASE_TABS: { id: Phase; label: string }[] = [
-  { id: 'Completed', label: 'Completed' },
-  { id: 'Testing / Validation', label: 'Testing / Validation' },
-  { id: 'In Development', label: 'In Development' },
-  { id: 'Approved', label: 'Approved' },
-  { id: 'Proposed', label: 'Proposed' },
-];
+/** Short column titles. */
+const SHORT: Record<Phase, string> = {
+  Scoping: 'Scoping',
+  Proposed: 'Proposed',
+  Approved: 'Approved',
+  'In Development': 'In dev',
+  'Testing / Validation': 'Testing',
+  Completed: 'Completed',
+};
+const TENTATIVE: Phase[] = ['Proposed', 'Approved'];
+/** Cards shown per column before "+ N more". */
+const CARD_LIMIT = 3;
 
 export default function PortfolioPage() {
-  const { data, role, actingAsId } = useApp();
-  const [params, setParams] = useSearchParams();
+  const { data, role, actingAsId, roiModels } = useApp();
+  const [expanded, setExpanded] = useState<Phase[]>([]);
   const projects = visibleProjects(data, role, actingAsId);
 
-  const requested = params.get('phase');
-  const active: Phase = PHASE_TABS.find((t) => t.id === requested)?.id ?? 'Completed';
-  const rows = projects.filter((p) => p.phase === active);
+  const npvOf = (id: string) => (roiModels[id] ? computeRoi(roiModels[id]).npv : null);
+  const portfolioNpv = projects.reduce((s, p) => s + (npvOf(p.id) ?? 0), 0);
+  const visibleIds = new Set(projects.map((p) => p.id));
+  const pendingHires = data.hires.filter((h) => visibleIds.has(h.projectId) && isPendingHire(h.status)).length;
   const platformName = (id: string) => data.platforms.find((pl) => pl.id === id)?.name ?? '—';
 
   return (
     <>
-      <PageHeader
-        title="Portfolio overview"
-        subtitle="Every project from one shared model, grouped by how far along it is. ROI and drill-down to the calculator arrive in step 7.3."
-      />
+      <PageHeader title="Portfolio overview" subtitle="Every project from one shared model, by phase. Click a project to open its ROI calculator." />
 
       <KpiStrip
         items={[
-          { label: 'Projects visible', value: `${projects.length} / ${data.projects.length}` },
-          { label: 'Platforms launched', value: `${data.platforms.filter((pl) => isPlatformLaunched(data, pl)).length} / ${data.platforms.length}` },
-          { label: 'Revenue-generating', value: String(projects.filter((p) => p.type === 'revenue').length) },
-          { label: 'Cost-only', value: String(projects.filter((p) => p.type === 'cost-only').length) },
+          { label: 'Active projects', value: String(projects.filter((p) => PHASE_TABS.includes(p.phase)).length) },
+          { label: 'Platforms launched', value: `${data.platforms.filter((pl) => isPlatformLaunched(data, pl)).length} of ${data.platforms.length}` },
+          { label: 'Portfolio NPV', value: `${portfolioNpv > 0 ? '+' : ''}${formatK(portfolioNpv)}` },
+          { label: 'Pending hires', value: String(pendingHires) },
         ]}
       />
 
-      <Panel>
-        <Tabs
-          label="Project phase"
-          tabs={PHASE_TABS.map((t) => ({ ...t, count: projects.filter((p) => p.phase === t.id).length }))}
-          active={active}
-          onChange={(phase) => setParams(phase === 'Completed' ? {} : { phase }, { replace: true })}
-        />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
+        {PHASE_TABS.map((phase) => {
+          const column = projects.filter((p) => p.phase === phase);
+          const open = expanded.includes(phase);
+          const shown = open ? column : column.slice(0, CARD_LIMIT);
+          const hidden = column.length - shown.length;
+          return (
+            <section key={phase} aria-label={`${phase}, ${column.length} projects`} className="min-w-0">
+              <h2 className="rounded-md bg-moss-100 px-3 py-1.5 text-[13px] font-semibold text-moss-900">
+                {SHORT[phase]} <span className="num font-normal text-moss-500">· {column.length}</span>
+              </h2>
+              <p className="h-6 px-1 pt-1 text-[12px] text-moss-500">{TENTATIVE.includes(phase) ? 'Tentative' : ''}</p>
 
-        <div role="tabpanel" aria-label={active} className="overflow-x-auto">
-          {rows.length === 0 ? (
-            <p className="px-4 py-6 text-[13px] text-moss-500">No projects in {active} for this role.</p>
-          ) : (
-            <table className={table}>
-              <thead>
-                <tr>
-                  <th className={`${th} min-w-[210px]`}>Project</th>
-                  <th className={th}>Platform</th>
-                  <th className={th}>Type</th>
-                  <th className={th}>Start – end</th>
-                  <th className={th}>Product mgr</th>
-                  <th className={th}>Project mgr</th>
-                  <th className={`${th} ${right}`}>Price / unit</th>
-                  <th className={`${th} ${right}`}>Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((p) => {
-                  const platform = data.platforms.find((pl) => pl.id === p.platformId)!;
+              <ul className="space-y-2">
+                {shown.map((p) => {
+                  const npv = npvOf(p.id);
                   return (
-                    <tr key={p.id} className="hover:bg-moss-50">
-                      <td className={td}>
-                        <div className="font-medium">{p.name}</div>
-                        <div className="text-[12px] text-moss-500">{p.quarterlyGoal}</div>
-                      </td>
-                      <td className={`${td} whitespace-nowrap`}>
-                        {platformName(p.platformId)}
-                        {isPlatformLaunched(data, platform) && (
-                          <span className="ml-2">
-                            <Tag tone="solid">Launched</Tag>
-                          </span>
-                        )}
-                      </td>
-                      <td className={`${td} whitespace-nowrap`}>
-                        {p.type === 'revenue' ? 'Revenue' : 'Cost-only'}
-                        <span className="text-moss-500">
-                          {' '}
-                          · {p.component === 'hardware' ? 'HW' : 'SW'}
-                          {p.recurring && ' · recurring'}
-                        </span>
-                      </td>
-                      <td className={`${td} num whitespace-nowrap`}>
-                        {formatDate(p.startDate)} – {formatDate(p.endDate)}
-                        <div className="text-[12px] text-moss-500">{durationMonths(p)} months</div>
-                      </td>
-                      <td className={`${td} whitespace-nowrap`}>{personName(data, p.ownerId)}</td>
-                      <td className={`${td} whitespace-nowrap`}>{personName(data, p.projectManagerId)}</td>
-                      <td className={`${td} num ${right}`}>
-                        {p.defaultPricePerUnit !== null ? formatMoney(p.defaultPricePerUnit) : <span className="text-moss-400">—</span>}
-                      </td>
-                      <td className={`${td} num ${right}`}>
-                        {p.grossMarginPct !== null ? `${p.grossMarginPct}%` : <span className="text-moss-400">—</span>}
-                      </td>
-                    </tr>
+                    <li key={p.id}>
+                      <Link
+                        to={`/roi/${p.id}?phase=${encodeURIComponent(phase)}`}
+                        className="block rounded-md border border-moss-200 bg-white px-3 py-2 hover:border-moss-500 focus-visible:outline-2 focus-visible:outline-moss-600"
+                      >
+                        <div className="text-[13px] leading-snug font-semibold text-moss-900">{p.name}</div>
+                        <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[12px] text-moss-500">
+                          <span className="truncate">{platformName(p.platformId)}</span>
+                          <span className="num shrink-0">{npv != null ? `NPV ${formatK(npv)}` : 'No ROI yet'}</span>
+                        </div>
+                      </Link>
+                    </li>
                   );
                 })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </Panel>
+                {column.length === 0 && <li className="px-1 text-[12px] text-moss-400">None</li>}
+              </ul>
+
+              {(hidden > 0 || open) && column.length > CARD_LIMIT && (
+                <button
+                  onClick={() => setExpanded(open ? expanded.filter((x) => x !== phase) : [...expanded, phase])}
+                  className="mt-2 px-1 text-[12px] font-medium text-moss-600 hover:text-moss-900"
+                >
+                  {open ? 'Show less' : `+ ${hidden} more`}
+                </button>
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      <p className="mt-6 text-[12px] text-moss-500">
+        Revenue planning unlocks from In Development onward; earlier phases are tentative.
+      </p>
     </>
   );
 }

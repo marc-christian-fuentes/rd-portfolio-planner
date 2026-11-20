@@ -5,7 +5,7 @@
  * 3 product platforms, 15 projects spread across every phase,
  * 6 departments and 30 people (shaped like an HR system feed).
  */
-import type { Department, Person, Platform, Project, SeedData } from './types';
+import type { Department, Person, Platform, Project, ProposedHire, SeedData } from './types';
 
 // ---------- Product platforms ----------
 
@@ -417,4 +417,43 @@ const projects: Project[] = [
   },
 ];
 
-export const seed: SeedData = { platforms, departments, people, projects };
+// ---------- Proposed hires (pending approval: Director → CTO → Finance) ----------
+
+const hires: ProposedHire[] = [
+  {
+    id: 'hire-1',
+    projectId: 'prj-11',
+    departmentId: 'dept-hw',
+    startDate: '2027-01-04',
+    hours: 1600,
+    status: 'Awaiting CTO',
+    history: [
+      { at: '2026-10-20', by: 'pjm-3', action: 'Proposed to close a hardware capacity gap' },
+      { at: '2026-10-24', by: 'ldr-dir', action: 'Approved by Director' },
+    ],
+  },
+  {
+    id: 'hire-2',
+    projectId: 'prj-06',
+    departmentId: 'dept-ai',
+    startDate: '2027-02-01',
+    hours: 1200,
+    status: 'Awaiting Director',
+    history: [{ at: '2026-11-05', by: 'pjm-2', action: 'Proposed to close an AI capacity gap' }],
+  },
+  {
+    id: 'hire-3',
+    projectId: 'prj-12',
+    departmentId: 'dept-sw',
+    startDate: '2027-01-04',
+    hours: 1600,
+    status: 'Awaiting Finance',
+    history: [
+      { at: '2026-10-02', by: 'pjm-1', action: 'Proposed to staff the optimisation service' },
+      { at: '2026-10-06', by: 'ldr-dir', action: 'Approved by Director' },
+      { at: '2026-10-13', by: 'ldr-cto', action: 'Approved by CTO' },
+    ],
+  },
+];
+
+export const seed: SeedData = { platforms, departments, people, projects, hires };

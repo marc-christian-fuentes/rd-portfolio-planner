@@ -123,6 +123,41 @@ export interface Project {
   recurring: boolean;
 }
 
+// ---------- ROI calculator (step 7.3) ----------
+
+/**
+ * When cash is assumed to arrive within each year.
+ * Mid-year: spread evenly through the year, so it is discounted by half a year less.
+ * End-of-year: all on the last day of the year.
+ */
+export type DiscountConvention = 'mid-year' | 'end-of-year';
+
+/** One year of inputs in a project's ROI model. Money is in $ thousands, except price. */
+export interface RoiYear {
+  units: number;
+  /** $ per unit (not thousands). */
+  price: number;
+  marginPct: number;
+  /** Cost savings, mainly for cost-only projects ($000s). */
+  savings: number;
+  /** Development spend ($000s). */
+  rdCost: number;
+  /** Running costs after launch: support, marketing, hosting ($000s). */
+  opex: number;
+}
+
+/** A multi-year cash flow model for one project, created by its product manager. */
+export interface RoiModel {
+  projectId: string;
+  /** Weighted average cost of capital, the discount rate (%). */
+  waccPct: number;
+  convention: DiscountConvention;
+  startYear: number;
+  years: RoiYear[];
+  createdBy: string;
+  updatedAt: ISODate;
+}
+
 // ---------- Defined now, seeded in later steps ----------
 
 /** Share of a person's capacity given to a project (e.g. 50%). */
@@ -209,4 +244,6 @@ export interface SeedData {
   departments: Department[];
   people: Person[];
   projects: Project[];
+  /** Proposed hires; full workflow arrives in step 7.4. */
+  hires: ProposedHire[];
 }

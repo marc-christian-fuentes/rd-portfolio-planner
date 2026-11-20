@@ -1,31 +1,37 @@
 @import 'tailwindcss';
 
 /*
- * DESIGN A · "Finance terminal"
- * Layout inspired by IBM Carbon and SAP Fiori: dense, square, numbers in aligned columns.
- * Fonts follow Pigment: DM Sans for everything, Crimson Pro (serif) for titles and headline figures.
- * Theme colour: dark olive. Use these names in classes, e.g. bg-moss-800, text-moss-900.
+ * DESIGN
+ * Clean sans-serif (DM Sans, as used by Pigment), a dark green top bar,
+ * a light green sidebar, white cards with soft 6px corners, and numbers
+ * that line up in columns.
+ * Use these names in classes, e.g. bg-moss-800, bg-sage-100, text-moss-900.
  */
 @theme {
   --font-sans: 'DM Sans Variable', 'Segoe UI', sans-serif;
-  --font-serif: 'Crimson Pro Variable', Georgia, serif;
 
-  /* Olive / moss scale: 50 = page, 800 = top bar, 900 = body text */
-  --color-moss-50: #f3f3ee;
-  --color-moss-100: #e7e8dd;
-  --color-moss-200: #d6d7cc;
-  --color-moss-300: #bfc2ae;
+  /* Dark green / olive scale: 50 = page, 800 = top bar, 900 = body text */
+  --color-moss-50: #f4f5f0;
+  --color-moss-100: #e8eadf;
+  --color-moss-200: #d7dacb;
+  --color-moss-300: #bfc3ad;
   --color-moss-400: #8e9677;
-  --color-moss-500: #6e7d4c;
-  --color-moss-600: #5b6b2f;
-  --color-moss-700: #46542a;
-  --color-moss-800: #2e3a1f;
-  --color-moss-900: #1e2316;
+  --color-moss-500: #6b7558;
+  --color-moss-600: #4f6a2c;
+  --color-moss-700: #3c5222;
+  --color-moss-800: #263419;
+  --color-moss-900: #1a2112;
 
-  /* Status colours, kept muted to sit with the olive */
+  /* Light green for the sidebar */
+  --color-sage-50: #f1f6ea;
+  --color-sage-100: #e3eed6;
+  --color-sage-200: #cfe0bb;
+  --color-sage-300: #b2cc94;
+
+  /* Status colours, kept muted to sit with the green */
   --color-ochre: #b8860b;
   --color-rust: #a4472b;
-  --color-slateblue: #4a6a8a;
+  --color-slateblue: #3f6188;
   --color-plum: #6b4e7a;
 }
 
@@ -37,9 +43,4 @@ body {
 /* Numbers line up in columns everywhere */
 .num {
   font-variant-numeric: tabular-nums;
-}
-
-/* Square, flat form controls */
-select {
-  @apply rounded-none;
 }

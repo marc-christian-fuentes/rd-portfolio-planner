@@ -11,6 +11,7 @@ import { ROLE_SUMMARY, SECTIONS, canSee, peopleForRole } from '../data/access';
 import { useApp } from '../store';
 import { usePhaseTab, withPhase } from './PhaseTabs';
 import { APP_NAME, APP_TAGLINE } from '../config';
+import { Logo } from './Logo';
 
 /** Carries the ?pm= product manager filter onto menu links. */
 function keepFilters(search: string): string {
@@ -33,6 +34,7 @@ export default function Layout() {
       <header className="sticky top-0 z-10 bg-moss-800 text-white">
         <div className="flex min-h-12 flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2">
           <div className="mr-auto flex items-center gap-3">
+            <Logo />
             <span className="text-[17px] font-semibold tracking-tight" aria-label={`${APP_NAME}.`}>
               {APP_NAME}
               <span className="text-sage-300">.</span>

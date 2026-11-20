@@ -1,5 +1,45 @@
 @import 'tailwindcss';
 
+/*
+ * DESIGN A · "Finance terminal"
+ * Layout inspired by IBM Carbon and SAP Fiori: dense, square, numbers in aligned columns.
+ * Fonts follow Pigment: DM Sans for everything, Crimson Pro (serif) for titles and headline figures.
+ * Theme colour: dark olive. Use these names in classes, e.g. bg-moss-800, text-moss-900.
+ */
+@theme {
+  --font-sans: 'DM Sans Variable', 'Segoe UI', sans-serif;
+  --font-serif: 'Crimson Pro Variable', Georgia, serif;
+
+  /* Olive / moss scale: 50 = page, 800 = top bar, 900 = body text */
+  --color-moss-50: #f3f3ee;
+  --color-moss-100: #e7e8dd;
+  --color-moss-200: #d6d7cc;
+  --color-moss-300: #bfc2ae;
+  --color-moss-400: #8e9677;
+  --color-moss-500: #6e7d4c;
+  --color-moss-600: #5b6b2f;
+  --color-moss-700: #46542a;
+  --color-moss-800: #2e3a1f;
+  --color-moss-900: #1e2316;
+
+  /* Status colours, kept muted to sit with the olive */
+  --color-ochre: #b8860b;
+  --color-rust: #a4472b;
+  --color-slateblue: #4a6a8a;
+  --color-plum: #6b4e7a;
+}
+
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-moss-50 font-sans text-moss-900 antialiased;
+  font-size: 14px;
+}
+
+/* Numbers line up in columns everywhere */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Square, flat form controls */
+select {
+  @apply rounded-none;
 }

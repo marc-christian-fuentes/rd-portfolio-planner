@@ -8,7 +8,7 @@ import { ACCESS, SECTIONS } from '../data/access';
 import { ROLES } from '../data/types';
 import { checkSeed, departmentCapacityHours, departmentMembers, departmentName, formatMoney, personName } from '../data/model';
 import { useApp } from '../store';
-import { Card, PageHeader, num, td, th } from '../components/ui';
+import { PageHeader, Panel, right, table, td, th } from '../components/ui';
 
 export default function AdminPage() {
   const data = useApp((s) => s.data);
@@ -16,19 +16,24 @@ export default function AdminPage() {
 
   return (
     <>
-      <PageHeader title="Admin" subtitle="Who sees what, and the demo’s departments and people. Editing users and mock integrations come in step 7.8." />
+      <PageHeader
+        title="Admin"
+        subtitle="Who sees what, and the demo’s departments and people. Editing users and mock integrations arrive in step 7.8."
+      />
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div
-          className={`rounded-xl border px-4 py-3 text-sm ${
-            problems.length ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          className={`border-l-[3px] px-4 py-2 text-[13px] ${
+            problems.length ? 'border-rust bg-white text-rust' : 'border-moss-600 bg-white text-moss-800'
           }`}
         >
           {problems.length === 0 ? (
-            <strong>Data self-check: all {checks} checks passed.</strong>
+            <>
+              <span className="font-semibold">Data self-check passed</span> · <span className="num">{checks}</span> checks, 0 problems
+            </>
           ) : (
             <>
-              <strong>Data self-check found {problems.length} problem(s):</strong>
+              <span className="font-semibold">Data self-check found {problems.length} problem(s)</span>
               <ul className="mt-1 list-disc pl-5">
                 {problems.map((p) => (
                   <li key={p}>{p}</li>
@@ -38,11 +43,9 @@ export default function AdminPage() {
           )}
         </div>
 
-        <Card>
-          <h2 className="font-semibold text-slate-900">Role visibility matrix</h2>
-          <p className="mb-3 text-sm text-slate-500">E = can edit, V = view only, blank = hidden.</p>
+        <Panel title="Role visibility matrix" aside={<span className="text-[12px] text-moss-500">E = edit · V = view · blank = hidden</span>}>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className={table}>
               <thead>
                 <tr>
                   <th className={th}>Section</th>
@@ -55,14 +58,14 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {SECTIONS.map((s) => (
-                  <tr key={s.id}>
+                  <tr key={s.id} className="hover:bg-moss-50">
                     <td className={`${td} font-medium`}>{s.label}</td>
                     {ROLES.map((r) => {
                       const a = ACCESS[s.id][r];
                       return (
-                        <td key={r} className={`${td} text-center`}>
-                          {a === 'edit' && <span className="font-bold text-emerald-700">E</span>}
-                          {a === 'view' && <span className="text-slate-500">V</span>}
+                        <td key={r} className={`${td} num text-center`}>
+                          {a === 'edit' && <span className="inline-block w-5 bg-moss-800 text-moss-50">E</span>}
+                          {a === 'view' && <span className="inline-block w-5 border border-moss-300 text-moss-600">V</span>}
                         </td>
                       );
                     })}
@@ -71,63 +74,63 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
-        </Card>
+        </Panel>
 
-        <Card>
-          <h2 className="mb-3 font-semibold text-slate-900">Departments</h2>
+        <Panel title="Departments">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className={table}>
               <thead>
                 <tr>
                   <th className={th}>Department</th>
-                  <th className={`${th} ${num}`}>Rate / hour</th>
-                  <th className={`${th} ${num}`}>Hours / person / year</th>
-                  <th className={`${th} ${num}`}>People</th>
-                  <th className={`${th} ${num}`}>Total capacity (hrs)</th>
+                  <th className={`${th} ${right}`}>Rate / hr</th>
+                  <th className={`${th} ${right}`}>Hrs / person / yr</th>
+                  <th className={`${th} ${right}`}>People</th>
+                  <th className={`${th} ${right}`}>Total capacity (hrs)</th>
                 </tr>
               </thead>
               <tbody>
                 {data.departments.map((d) => (
-                  <tr key={d.id}>
+                  <tr key={d.id} className="hover:bg-moss-50">
                     <td className={td}>{d.name}</td>
-                    <td className={`${td} ${num}`}>{formatMoney(d.ratePerHour)}</td>
-                    <td className={`${td} ${num}`}>{d.capacityHoursPerYear.toLocaleString()}</td>
-                    <td className={`${td} ${num}`}>{departmentMembers(data, d.id).length}</td>
-                    <td className={`${td} ${num}`}>{departmentCapacityHours(data, d.id).toLocaleString()}</td>
+                    <td className={`${td} num ${right}`}>{formatMoney(d.ratePerHour)}</td>
+                    <td className={`${td} num ${right}`}>{d.capacityHoursPerYear.toLocaleString()}</td>
+                    <td className={`${td} num ${right}`}>{departmentMembers(data, d.id).length}</td>
+                    <td className={`${td} num ${right}`}>{departmentCapacityHours(data, d.id).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
+        </Panel>
 
-        <Card>
-          <h2 className="mb-3 font-semibold text-slate-900">People (mock HR feed)</h2>
+        <Panel title="People" aside={<span className="text-[12px] text-moss-500">Mock HR system feed</span>}>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className={table}>
               <thead>
                 <tr>
                   <th className={th}>Name</th>
                   <th className={th}>Title</th>
                   <th className={th}>Department</th>
                   <th className={th}>Reports to</th>
-                  <th className={`${th} ${num}`}>Capacity (hrs/yr)</th>
+                  <th className={`${th} ${right}`}>Capacity (hrs/yr)</th>
                 </tr>
               </thead>
               <tbody>
                 {data.people.map((p) => (
-                  <tr key={p.id}>
-                    <td className={td}>{p.name}</td>
+                  <tr key={p.id} className="hover:bg-moss-50">
+                    <td className={`${td} whitespace-nowrap`}>{p.name}</td>
                     <td className={td}>{p.title}</td>
                     <td className={td}>{departmentName(data, p.departmentId)}</td>
-                    <td className={td}>{personName(data, p.managerId)}</td>
-                    <td className={`${td} ${num}`}>{p.capacityHoursPerYear ? p.capacityHoursPerYear.toLocaleString() : '—'}</td>
+                    <td className={`${td} whitespace-nowrap`}>{personName(data, p.managerId)}</td>
+                    <td className={`${td} num ${right}`}>
+                      {p.capacityHoursPerYear ? p.capacityHoursPerYear.toLocaleString() : <span className="text-moss-400">—</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
+        </Panel>
       </div>
     </>
   );

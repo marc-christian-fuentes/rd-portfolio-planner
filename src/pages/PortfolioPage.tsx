@@ -6,7 +6,7 @@
 import { visibleProjects } from '../data/access';
 import { durationMonths, formatDate, formatMoney, isPlatformLaunched, personName } from '../data/model';
 import { useApp } from '../store';
-import { Card, PageHeader, PhaseBadge, Pill, num, td, th } from '../components/ui';
+import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
 
 export default function PortfolioPage() {
   const { data, role, actingAsId } = useApp();
@@ -17,71 +17,87 @@ export default function PortfolioPage() {
     <>
       <PageHeader
         title="Portfolio overview"
-        subtitle={`${projects.length} of ${data.projects.length} projects visible to this role, across ${platforms.length} product platform${platforms.length === 1 ? '' : 's'}. ROI and drill-down come in step 7.3.`}
+        subtitle="Every product platform and its projects, from one shared model. ROI and drill-down to the calculator arrive in step 7.3."
       />
 
-      {platforms.length === 0 && <Card>No projects are assigned to this person.</Card>}
+      <KpiStrip
+        items={[
+          { label: 'Projects visible', value: `${projects.length} / ${data.projects.length}` },
+          { label: 'Platforms', value: String(platforms.length) },
+          { label: 'Revenue-generating', value: String(projects.filter((p) => p.type === 'revenue').length) },
+          { label: 'Cost-only', value: String(projects.filter((p) => p.type === 'cost-only').length) },
+        ]}
+      />
 
-      <div className="space-y-5">
+      {platforms.length === 0 && <Panel>No projects are assigned to this person.</Panel>}
+
+      <div className="space-y-4">
         {platforms.map((platform) => {
           const launched = isPlatformLaunched(data, platform);
           return (
-            <Card key={platform.id}>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-slate-900">{platform.name}</h2>
-                <Pill tone={launched ? 'green' : 'slate'}>{launched ? 'Launched' : 'In progress'}</Pill>
-              </div>
-              <p className="mt-1 text-sm text-slate-500">
-                {platform.description} Hardware: {platform.hardwarePiece}. Software: {platform.softwarePiece}.
-              </p>
-
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full border-collapse">
+            <Panel
+              key={platform.id}
+              title={
+                <span className="flex items-center gap-2">
+                  {platform.name}
+                  <Tag tone={launched ? 'solid' : 'neutral'}>{launched ? 'Launched' : 'In progress'}</Tag>
+                </span>
+              }
+              aside={<span className="text-[12px] text-moss-500">{platform.description}</span>}
+            >
+              <div className="overflow-x-auto">
+                <table className={table}>
                   <thead>
                     <tr>
                       <th className={th}>Project</th>
                       <th className={th}>Phase</th>
                       <th className={th}>Type</th>
-                      <th className={th}>Dates</th>
-                      <th className={th}>Product manager</th>
-                      <th className={th}>Project manager</th>
-                      <th className={`${th} ${num}`}>Price / unit</th>
+                      <th className={th}>Start – end</th>
+                      <th className={`${th} ${right}`}>Months</th>
+                      <th className={th}>Product mgr</th>
+                      <th className={th}>Project mgr</th>
+                      <th className={`${th} ${right}`}>Price / unit</th>
+                      <th className={`${th} ${right}`}>Margin</th>
                     </tr>
                   </thead>
                   <tbody>
                     {projects
                       .filter((p) => p.platformId === platform.id)
                       .map((p) => (
-                        <tr key={p.id}>
+                        <tr key={p.id} className="hover:bg-moss-50">
                           <td className={td}>
-                            <div className="font-medium text-slate-900">{p.name}</div>
-                            <div className="text-xs text-slate-500">Goal: {p.quarterlyGoal}</div>
+                            <div className="font-medium">{p.name}</div>
+                            <div className="text-[12px] text-moss-500">{p.quarterlyGoal}</div>
                           </td>
                           <td className={td}>
-                            <PhaseBadge phase={p.phase} />
-                          </td>
-                          <td className={td}>
-                            {p.type === 'revenue' ? 'Revenue' : 'Cost-only'}
-                            <div className="text-xs capitalize text-slate-500">
-                              {p.component}
-                              {p.recurring && ' · recurring'}
-                            </div>
+                            <PhaseMarker phase={p.phase} />
                           </td>
                           <td className={`${td} whitespace-nowrap`}>
-                            {formatDate(p.startDate)} – {formatDate(p.endDate)}
-                            <div className="text-xs text-slate-500">{durationMonths(p)} months</div>
+                            {p.type === 'revenue' ? 'Revenue' : 'Cost-only'}
+                            <span className="text-moss-500">
+                              {' '}
+                              · {p.component === 'hardware' ? 'HW' : 'SW'}
+                              {p.recurring && ' · recurring'}
+                            </span>
                           </td>
-                          <td className={td}>{personName(data, p.ownerId)}</td>
-                          <td className={td}>{personName(data, p.projectManagerId)}</td>
-                          <td className={`${td} ${num}`}>
-                            {p.defaultPricePerUnit !== null ? formatMoney(p.defaultPricePerUnit) : '—'}
+                          <td className={`${td} num whitespace-nowrap`}>
+                            {formatDate(p.startDate)} – {formatDate(p.endDate)}
+                          </td>
+                          <td className={`${td} num ${right}`}>{durationMonths(p)}</td>
+                          <td className={`${td} whitespace-nowrap`}>{personName(data, p.ownerId)}</td>
+                          <td className={`${td} whitespace-nowrap`}>{personName(data, p.projectManagerId)}</td>
+                          <td className={`${td} num ${right}`}>
+                            {p.defaultPricePerUnit !== null ? formatMoney(p.defaultPricePerUnit) : <span className="text-moss-400">—</span>}
+                          </td>
+                          <td className={`${td} num ${right}`}>
+                            {p.grossMarginPct !== null ? `${p.grossMarginPct}%` : <span className="text-moss-400">—</span>}
                           </td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
               </div>
-            </Card>
+            </Panel>
           );
         })}
       </div>

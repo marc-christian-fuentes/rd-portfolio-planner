@@ -18,7 +18,10 @@
   - Project view: the ROI calculator (WACC, mid-year discounting, live NPV, ROI, IRR, payback) and the project's schedule.
 - **Forecast**: P&L and cash flow that feed the corporate plan.
 - **Roadmap**: every project on a timeline.
-- **Quarterly planning, Unit cost builder, Project management, Sales pipeline**: coming in later steps.
+- **Project management**
+  - Costs & resourcing: allocate people to projects, see staffing gaps, propose hires (Director → CTO → Finance approval), plan non-labour costs.
+  - Capacity: utilisation by department and person.
+- **Quarterly planning, Unit cost builder, Sales pipeline**: coming in later steps.
 
 ## Where things live
 
@@ -35,7 +38,7 @@
 - [x] 1. Seed data and data model
 - [x] 2. Role switcher and app layout
 - [x] 3. Portfolio views, ROI calculator, forecast and roadmap
-- [ ] 4. Costs, resourcing and proposed hires
+- [x] 4. Costs, resourcing and proposed hires
 - [ ] 5. Sales revenue (recurring and warranty)
 - [ ] 6. Quarterly planning (Rank by comparing)
 - [ ] 7. Manufacturing unit cost builder

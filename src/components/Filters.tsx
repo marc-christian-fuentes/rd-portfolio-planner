@@ -58,6 +58,27 @@ export function FilterSelect({
 }
 
 /**
+ * "Include pending hires" switch (spec section 4): shows ROI and forecasts
+ * with or without hires that Finance hasn't approved yet. Approved hires
+ * always count.
+ */
+export function HiresToggle() {
+  const include = useApp((s) => s.includePendingHires);
+  const setInclude = useApp((s) => s.setIncludePendingHires);
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-moss-600">
+      <input
+        type="checkbox"
+        checked={include}
+        onChange={(e) => setInclude(e.target.checked)}
+        className="size-4 accent-moss-700"
+      />
+      Include pending hires
+    </label>
+  );
+}
+
+/**
  * "Product manager: All / Aisha Karim / …". Hidden when the viewer is a
  * product manager, since they only ever see their own projects.
  */

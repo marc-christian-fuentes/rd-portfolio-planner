@@ -12,6 +12,8 @@ import PlatformPage from './pages/PlatformPage';
 import RoiPage from './pages/RoiPage';
 import ForecastPage from './pages/ForecastPage';
 import RoadmapPage from './pages/RoadmapPage';
+import ResourcingPage from './pages/ResourcingPage';
+import CapacityPage from './pages/CapacityPage';
 import AdminPage from './pages/AdminPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import { canSee, homePath, type SectionId } from './data/access';
@@ -51,8 +53,8 @@ export default function App() {
           <Route path="/manufacturing" element={placeholder('manufacturing')} />
 
           {/* Project management */}
-          <Route path="/resourcing" element={placeholder('resourcing')} />
-          <Route path="/capacity" element={placeholder('capacity')} />
+          <Route path="/resourcing" element={page('resourcing', <ResourcingPage />)} />
+          <Route path="/capacity" element={page('capacity', <CapacityPage />)} />
 
           <Route path="/sales" element={placeholder('sales')} />
           <Route path="/assumptions" element={placeholder('assumptions')} />

@@ -21,6 +21,8 @@ interface Row {
   pct?: boolean;
   /** A heading row shown above this row. */
   section?: string;
+  /** Hide the row when it is zero in every year. */
+  onlyIfUsed?: boolean;
 }
 
 const ROWS: Row[] = [
@@ -29,6 +31,7 @@ const ROWS: Row[] = [
   { label: 'Gross profit', value: (y) => y.grossProfit, strong: true, rule: true, total: 'sum' },
   { label: 'Gross margin', value: (y) => (y.revenue > 0 ? (y.grossProfit / y.revenue) * 100 : NaN), pct: true, total: 'margin' },
   { label: 'R&D expense', value: (y) => y.rdCost, outflow: true, rule: true, total: 'sum' },
+  { label: 'New hires (R&D)', value: (y) => y.hireCost, outflow: true, total: 'sum', onlyIfUsed: true },
   { label: 'Operating expense', value: (y) => y.opex, outflow: true, total: 'sum' },
   { label: 'Cost savings', value: (y) => y.savings, total: 'sum' },
   { label: 'Operating income (pre-tax)', value: (y) => y.operatingIncome, strong: true, rule: true, total: 'sum' },
@@ -70,7 +73,7 @@ export function PnlTable({ pnl, title, aside }: { pnl: Pnl; title: string; aside
             </tr>
           </thead>
           <tbody>
-            {ROWS.map((row) => {
+            {ROWS.filter((row) => !row.onlyIfUsed || pnl.years.some((y) => Math.abs(row.value(y)) >= 0.5)).map((row) => {
               const rule = row.rule ? 'border-t-moss-300' : '';
               const weight = row.strong ? 'font-semibold' : '';
               const muted = row.pct ? 'text-moss-500' : '';

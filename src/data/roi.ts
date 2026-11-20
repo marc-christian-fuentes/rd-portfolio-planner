@@ -20,6 +20,8 @@ export interface RoiRow {
   grossProfit: number;
   savings: number;
   rdCost: number;
+  /** Cost of new hires on this project this year (proposed or approved). */
+  hireCost: number;
   opex: number;
   netCashFlow: number;
   discountFactor: number;
@@ -50,14 +52,19 @@ export function discountFactor(waccPct: number, t: number, convention: DiscountC
   return 1 / Math.pow(1 + waccPct / 100, timing(t, convention));
 }
 
-export function computeRoi(model: RoiModel): RoiResult {
+/**
+ * @param hireCosts optional extra R&D cost per model year from new hires
+ *   ($ thousands), which lowers the cash flow and NPV.
+ */
+export function computeRoi(model: RoiModel, hireCosts?: number[]): RoiResult {
   let cumulative = 0;
   const rows: RoiRow[] = model.years.map((y, i) => {
     const t = i + 1;
     const revenue = (y.units * y.price) / 1000;
     const cogs = revenue * (1 - y.marginPct / 100);
     const grossProfit = revenue - cogs;
-    const netCashFlow = grossProfit + y.savings - y.rdCost - y.opex;
+    const hireCost = hireCosts?.[i] ?? 0;
+    const netCashFlow = grossProfit + y.savings - y.rdCost - hireCost - y.opex;
     const df = discountFactor(model.waccPct, t, model.convention);
     const presentValue = netCashFlow * df;
     cumulative += presentValue;
@@ -69,6 +76,7 @@ export function computeRoi(model: RoiModel): RoiResult {
       grossProfit,
       savings: y.savings,
       rdCost: y.rdCost,
+      hireCost,
       opex: y.opex,
       netCashFlow,
       discountFactor: df,
@@ -78,7 +86,7 @@ export function computeRoi(model: RoiModel): RoiResult {
   });
 
   const npv = cumulative;
-  const pvCosts = rows.reduce((sum, r) => sum + (r.rdCost + r.opex) * r.discountFactor, 0);
+  const pvCosts = rows.reduce((sum, r) => sum + (r.rdCost + r.hireCost + r.opex) * r.discountFactor, 0);
 
   return {
     rows,

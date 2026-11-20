@@ -5,7 +5,7 @@
  * 3 product platforms, 15 projects spread across every phase,
  * 6 departments and 30 people (shaped like an HR system feed).
  */
-import type { Department, Person, Platform, Project, ProposedHire, SeedData } from './types';
+import type { Allocation, CostLine, Department, Person, Platform, Project, ProposedHire, SeedData } from './types';
 
 // ---------- Product platforms ----------
 
@@ -437,7 +437,7 @@ const hires: ProposedHire[] = [
     projectId: 'prj-06',
     departmentId: 'dept-ai',
     startDate: '2027-02-01',
-    hours: 1200,
+    hours: 1000,
     status: 'Awaiting Director',
     history: [{ at: '2026-11-05', by: 'pjm-2', action: 'Proposed to close an AI capacity gap' }],
   },
@@ -446,7 +446,7 @@ const hires: ProposedHire[] = [
     projectId: 'prj-12',
     departmentId: 'dept-sw',
     startDate: '2027-01-04',
-    hours: 1600,
+    hours: 900,
     status: 'Awaiting Finance',
     history: [
       { at: '2026-10-02', by: 'pjm-1', action: 'Proposed to staff the optimisation service' },
@@ -457,3 +457,56 @@ const hires: ProposedHire[] = [
 ];
 
 export const seed: SeedData = { platforms, departments, people, projects, hires };
+
+// ---------- Allocations: % of each person's year given to each project ----------
+// Some people are deliberately left with spare time, and one (Pavel Novak) is
+// over-allocated, so the capacity view has something to flag.
+
+const alloc = (personId: string, projectId: string, percent: number): Allocation => ({
+  id: `al-${personId}-${projectId}`,
+  personId,
+  projectId,
+  percent,
+});
+
+export const seedAllocations: Allocation[] = [
+  // Priya Raman's team → Energy Optimisation Service
+  alloc('r-01', 'prj-12', 50),
+  alloc('r-12', 'prj-12', 40),
+  alloc('r-13', 'prj-12', 30),
+  alloc('r-16', 'prj-12', 20),
+  // Marcus Bell's team → Leak Detection AI Model and Mobile App Rebuild
+  alloc('r-10', 'prj-06', 90),
+  alloc('r-02', 'prj-06', 30),
+  alloc('r-15', 'prj-06', 30),
+  alloc('r-03', 'prj-06', 20),
+  alloc('r-04', 'prj-07', 100),
+  alloc('r-03', 'prj-07', 70),
+  alloc('r-02', 'prj-07', 50),
+  alloc('r-15', 'prj-07', 40),
+  // Ingrid Solberg's team → Valve Actuator v2, OTA Updates, Battery Controller Board, Thermal Safety
+  alloc('r-06', 'prj-11', 60),
+  alloc('r-06', 'prj-05', 40),
+  alloc('r-07', 'prj-11', 50),
+  alloc('r-07', 'prj-05', 30),
+  alloc('r-07', 'prj-13', 30),
+  alloc('r-05', 'prj-08', 60),
+  alloc('r-05', 'prj-11', 40),
+  alloc('r-11', 'prj-11', 30),
+  alloc('r-11', 'prj-08', 40),
+  alloc('r-11', 'prj-05', 20),
+  alloc('r-14', 'prj-13', 50),
+  alloc('r-14', 'prj-05', 50),
+];
+
+// ---------- Non-labour costs ($ per period) ----------
+
+export const seedCostLines: CostLine[] = [
+  { id: 'cl-1', projectId: 'prj-13', label: 'Certification lab fees', amount: 45000, granularity: 'quarterly' },
+  { id: 'cl-2', projectId: 'prj-13', label: 'Thermal chamber rental', amount: 6000, granularity: 'monthly' },
+  { id: 'cl-3', projectId: 'prj-05', label: 'Endurance test rigs', amount: 25000, granularity: 'quarterly' },
+  { id: 'cl-4', projectId: 'prj-11', label: 'Prototype PCB runs', amount: 18000, granularity: 'quarterly' },
+  { id: 'cl-5', projectId: 'prj-06', label: 'Cloud GPU training', amount: 9000, granularity: 'monthly' },
+  { id: 'cl-6', projectId: 'prj-12', label: 'Staging cloud hosting', amount: 4000, granularity: 'monthly' },
+  { id: 'cl-7', projectId: 'prj-08', label: 'Field test units', amount: 30000, granularity: 'annual' },
+];

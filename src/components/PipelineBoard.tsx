@@ -5,9 +5,9 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { computeRoi, formatK } from '../data/roi';
+import { formatK } from '../data/roi';
 import type { Phase, Project } from '../data/types';
-import { useApp } from '../store';
+import { useApp, useRoiFor } from '../store';
 import { PHASE_TABS } from './PhaseTabs';
 
 const SHORT: Record<Phase, string> = {
@@ -22,7 +22,8 @@ const TENTATIVE: Phase[] = ['Proposed', 'Approved'];
 const CARD_LIMIT = 3;
 
 export function PipelineBoard({ projects }: { projects: Project[] }) {
-  const { data, roiModels } = useApp();
+  const data = useApp((s) => s.data);
+  const roiFor = useRoiFor();
   const [expanded, setExpanded] = useState<Phase[]>([]);
   const platformName = (id: string) => data.platforms.find((pl) => pl.id === id)?.name ?? '—';
 
@@ -42,8 +43,7 @@ export function PipelineBoard({ projects }: { projects: Project[] }) {
               <p className="h-6 px-1 pt-1 text-[12px] text-moss-500">{TENTATIVE.includes(phase) ? 'Tentative' : ''}</p>
               <ul className="space-y-2">
                 {shown.map((p) => {
-                  const model = roiModels[p.id];
-                  const npv = model ? computeRoi(model).npv : null;
+                  const npv = roiFor(p.id)?.npv ?? null;
                   return (
                     <li key={p.id}>
                       <Link

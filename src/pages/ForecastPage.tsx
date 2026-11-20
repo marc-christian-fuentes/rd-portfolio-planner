@@ -9,18 +9,19 @@ import { Link } from 'react-router-dom';
 import { visibleProjects } from '../data/access';
 import { formatK } from '../data/roi';
 import { formatAccounting, yearlyPnl } from '../data/rollup';
-import { useApp } from '../store';
+import { useApp, useRoiFor } from '../store';
 import { KpiStrip, PageHeader, Panel, right, table, td, th } from '../components/ui';
-import { FilterSelect, PmFilter, byPm, usePmFilter, useQueryParam } from '../components/Filters';
+import { FilterSelect, HiresToggle, PmFilter, byPm, usePmFilter, useQueryParam } from '../components/Filters';
 import { PnlTable } from '../components/PnlTable';
 
 export default function ForecastPage() {
-  const { data, role, actingAsId, roiModels } = useApp();
+  const { data, role, actingAsId } = useApp();
+  const roiFor = useRoiFor();
   const [pm] = usePmFilter();
   const [platformId, setPlatformId] = useQueryParam('platform', 'all');
 
   const projects = byPm(visibleProjects(data, role, actingAsId), pm).filter((p) => platformId === 'all' || p.platformId === platformId);
-  const pnl = yearlyPnl(projects, roiModels);
+  const pnl = yearlyPnl(projects, roiFor);
 
   const sum = (f: (y: (typeof pnl.years)[number]) => number) => pnl.years.reduce((s, y) => s + f(y), 0);
   const lowest = pnl.years.reduce((m, y) => Math.min(m, y.cumulative), 0);
@@ -40,6 +41,7 @@ export default function ForecastPage() {
           onChange={setPlatformId}
           options={[{ value: 'all', label: 'All' }, ...data.platforms.map((pl) => ({ value: pl.id, label: pl.name }))]}
         />
+        <HiresToggle />
       </PageHeader>
 
       <KpiStrip
@@ -114,7 +116,7 @@ export default function ForecastPage() {
         )}
 
         <p className="text-[12px] text-moss-500">
-          Built from each project’s ROI model. Projects without a model aren’t included yet. Pending hires join the costs in step 7.4.
+          Built from each project’s ROI model. Projects without a model aren’t included yet. New hires show as their own cost line; approved hires always count, pending ones when the switch is on.
         </p>
       </div>
     </>

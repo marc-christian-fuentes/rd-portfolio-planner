@@ -8,15 +8,17 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { canEditRoi, visibleProjects } from '../data/access';
 import { durationMonths, formatDate, formatDay, personName, scheduleStatus } from '../data/model';
-import { MAX_YEARS, MIN_YEARS, computeRoi, formatK, type RoiResult, type RoiRow } from '../data/roi';
+import { MAX_YEARS, MIN_YEARS, formatK, type RoiResult, type RoiRow } from '../data/roi';
 import type { Project, RoiModel, RoiYear } from '../data/types';
-import { useApp } from '../store';
+import { useApp, useRoiFor } from '../store';
+import { HiresToggle } from '../components/Filters';
 import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
 import { PhaseTabs, usePhaseTab, withPhase } from '../components/PhaseTabs';
 import { NumberInput } from '../components/NumberInput';
 
 export default function RoiPage() {
-  const { data, role, actingAsId, roiModels } = useApp();
+  const { data, role, actingAsId } = useApp();
+  const roiFor = useRoiFor();
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [phase] = usePhaseTab();
@@ -25,7 +27,7 @@ export default function RoiPage() {
   const inTab = projects.filter((p) => p.phase === phase);
   const selected = projects.find((p) => p.id === projectId) ?? inTab[0];
   const platformName = (id: string) => data.platforms.find((pl) => pl.id === id)?.name ?? '—';
-  const selectedModel = selected ? roiModels[selected.id] : undefined;
+  const selectedResult = selected ? roiFor(selected.id) : null;
 
   return (
     <>
@@ -39,12 +41,14 @@ export default function RoiPage() {
               <span className="num">
                 {' '}
                 · {formatDate(selected.startDate)} – {formatDate(selected.endDate)} · NPV{' '}
-                {selectedModel ? formatK(computeRoi(selectedModel).npv) : 'no model yet'}
+                {selectedResult ? formatK(selectedResult.npv) : 'no model yet'}
               </span>
             </span>
           )
         }
-      />
+      >
+        <HiresToggle />
+      </PageHeader>
 
       <Panel>
         <PhaseTabs projects={projects} active={phase} onChange={(p) => navigate(withPhase('/project', p), { replace: true })} />
@@ -64,8 +68,7 @@ export default function RoiPage() {
               </thead>
               <tbody>
                 {inTab.map((p) => {
-                  const model = roiModels[p.id];
-                  const result = model ? computeRoi(model) : null;
+                  const result = roiFor(p.id);
                   const isSelected = p.id === selected?.id;
                   return (
                     <tr
@@ -188,7 +191,8 @@ function Schedule({ project }: { project: Project }) {
 }
 
 function ModelView({ project, model, canEdit }: { project: Project; model: RoiModel; canEdit: boolean }) {
-  const result = computeRoi(model);
+  // Includes this project's hire costs (pending ones when the switch is on).
+  const result = useRoiFor()(project.id)!;
 
   return (
     <>
@@ -333,6 +337,9 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
         ]
       : [{ label: 'Cost savings', input: 'savings', format: 'money', total: true }]),
     { label: 'R&D cost', input: 'rdCost', format: 'money', total: true, rule: true },
+    ...(result.rows.some((r) => r.hireCost >= 0.5)
+      ? [{ label: 'New hires (from resourcing)', calc: 'hireCost', format: 'money', total: true, negate: true }]
+      : []),
     { label: 'Operating cost', input: 'opex', format: 'money', total: true },
     { label: 'Net cash flow', calc: 'netCashFlow', format: 'money', total: true, strong: true, rule: true },
     { label: `Discount factor (${model.convention === 'mid-year' ? 'mid-year' : 'end of year'})`, calc: 'discountFactor', format: 'factor', total: false },

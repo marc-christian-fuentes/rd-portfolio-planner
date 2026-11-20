@@ -168,19 +168,17 @@ export interface Allocation {
   percent: number;
 }
 
+/**
+ * A non-labour cost such as testing materials or lab fees, planned per
+ * month, quarter or year. (Labour costs come from allocations instead.)
+ */
 export interface CostLine {
   id: string;
   projectId: string;
-  kind: 'labour' | 'non-labour';
   label: string;
-  departmentId: string | null;
-  personId: string | null;
-  hours: number | null;
-  amount: number | null;
+  /** $ per period (not thousands). */
+  amount: number;
   granularity: Granularity;
-  period: string; // e.g. "2026-Q3" or "2026-07"
-  /** True when it comes from a hire that is not yet approved by Finance. */
-  proposed: boolean;
 }
 
 export interface RevenuePlan {
@@ -202,6 +200,7 @@ export interface ProposedHire {
   projectId: string;
   departmentId: string;
   startDate: ISODate;
+  /** Hours per year on this project, from the start date until the project ends. */
   hours: number;
   status: HireStatus;
   history: { at: ISODate; by: string; action: string }[];

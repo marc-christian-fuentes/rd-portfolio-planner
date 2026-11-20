@@ -13,9 +13,9 @@ import { isPendingHire, isPlatformLaunched } from '../data/model';
 import { formatK } from '../data/roi';
 import { formatAccounting, marginPctOf, roiPctOf, totalCostOf, totalsFor, type Totals } from '../data/rollup';
 import type { Project } from '../data/types';
-import { useApp } from '../store';
+import { useApp, useRoiFor } from '../store';
 import { KpiStrip, PageHeader, Panel, Tag, right, table, td, th } from '../components/ui';
-import { PmFilter, byPm, usePmFilter, useQueryParam } from '../components/Filters';
+import { HiresToggle, PmFilter, byPm, usePmFilter, useQueryParam } from '../components/Filters';
 import { PipelineBoard } from '../components/PipelineBoard';
 
 interface Group {
@@ -29,14 +29,15 @@ interface Group {
 }
 
 export default function SummaryPage() {
-  const { data, role, actingAsId, roiModels } = useApp();
+  const { data, role, actingAsId, hires, includePendingHires } = useApp();
+  const roiFor = useRoiFor();
   const [pm] = usePmFilter();
   const [groupBy, setGroupBy] = useQueryParam('group', 'platform');
   const projects = byPm(visibleProjects(data, role, actingAsId), pm);
-  const totals = totalsFor(projects, roiModels);
+  const totals = totalsFor(projects, roiFor);
 
   const visibleIds = new Set(projects.map((p) => p.id));
-  const pendingHires = data.hires.filter((h) => visibleIds.has(h.projectId) && isPendingHire(h.status)).length;
+  const pendingHires = hires.filter((h) => visibleIds.has(h.projectId) && isPendingHire(h.status)).length;
 
   const groups: Group[] =
     groupBy === 'pm'
@@ -63,6 +64,7 @@ export default function SummaryPage() {
     <>
       <PageHeader title="Portfolio summary" subtitle="Every product platform side by side. Lifetime totals from each project’s ROI model, in $ thousands.">
         <PmFilter />
+        <HiresToggle />
         <div className="flex items-center gap-2 text-[13px] text-moss-600">
           Group by
           <div className="flex overflow-hidden rounded-md" role="group" aria-label="Group by">
@@ -99,7 +101,11 @@ export default function SummaryPage() {
 
       <Panel
         title={groupBy === 'pm' ? 'By product manager' : 'By product platform'}
-        aside={<span className="text-[12px] text-moss-500">{pendingHires} pending hire{pendingHires === 1 ? '' : 's'} not yet in costs</span>}
+        aside={
+          <span className="text-[12px] text-moss-500">
+            {pendingHires} pending hire{pendingHires === 1 ? '' : 's'} {includePendingHires ? 'included in R&D' : 'left out'}
+          </span>
+        }
       >
         <div className="overflow-x-auto">
           <table className={table}>
@@ -119,7 +125,7 @@ export default function SummaryPage() {
             </thead>
             <tbody>
               {shownGroups.map((g) => (
-                <MetricsRow key={g.key} label={<GroupLabel group={g} />} totals={totalsFor(g.projects, roiModels)} />
+                <MetricsRow key={g.key} label={<GroupLabel group={g} />} totals={totalsFor(g.projects, roiFor)} />
               ))}
               {shownGroups.length > 1 && <MetricsRow label="Total" totals={totals} strong />}
               {shownGroups.length === 0 && (
@@ -170,7 +176,9 @@ function MetricsRow({ label, totals, strong }: { label: ReactNode; totals: Total
       <td className={cell}>{formatAccounting(totals.revenue)}</td>
       <td className={cell}>{formatAccounting(-totals.cogs)}</td>
       <td className={cell}>{margin != null ? `${margin.toFixed(0)}%` : '—'}</td>
-      <td className={cell}>{formatAccounting(-totals.rdCost)}</td>
+      <td className={cell} title={totals.hireCost > 0 ? `Includes ${formatAccounting(totals.hireCost)} for new hires` : undefined}>
+        {formatAccounting(-(totals.rdCost + totals.hireCost))}
+      </td>
       <td className={cell}>{formatAccounting(-totals.opex)}</td>
       <td className={cell}>{formatAccounting(totals.npv)}</td>
       <td className={cell}>{roi != null ? `${roi.toFixed(0)}%` : '—'}</td>

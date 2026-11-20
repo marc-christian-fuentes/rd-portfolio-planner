@@ -7,11 +7,11 @@
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { visibleProjects } from '../data/access';
 import { isPlatformLaunched, personName } from '../data/model';
-import { computeRoi, formatK } from '../data/roi';
+import { formatK } from '../data/roi';
 import { roiPctOf, totalCostOf, totalsFor, yearlyPnl } from '../data/rollup';
-import { useApp } from '../store';
+import { useApp, useRoiFor } from '../store';
 import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag } from '../components/ui';
-import { FilterSelect, PmFilter, byPm, usePmFilter } from '../components/Filters';
+import { FilterSelect, HiresToggle, PmFilter, byPm, usePmFilter } from '../components/Filters';
 import { PnlTable } from '../components/PnlTable';
 import { PHASE_TABS } from '../components/PhaseTabs';
 
@@ -22,7 +22,8 @@ const order = (phase: (typeof PHASE_TABS)[number] | 'Scoping') => {
 };
 
 export default function PlatformPage() {
-  const { data, role, actingAsId, roiModels } = useApp();
+  const { data, role, actingAsId } = useApp();
+  const roiFor = useRoiFor();
   const { platformId } = useParams();
   const navigate = useNavigate();
   const { search } = useLocation();
@@ -51,7 +52,7 @@ export default function PlatformPage() {
   const own = projects
     .filter((p) => p.platformId === platform.id)
     .sort((a, b) => order(a.phase) - order(b.phase));
-  const totals = totalsFor(own, roiModels);
+  const totals = totalsFor(own, roiFor);
   const roi = roiPctOf(totals);
 
   return (
@@ -67,6 +68,7 @@ export default function PlatformPage() {
           }))}
         />
         <PmFilter />
+        <HiresToggle />
       </PageHeader>
 
       <div className="mb-5 rounded-[10px] border border-moss-200 bg-white">
@@ -89,7 +91,7 @@ export default function PlatformPage() {
               { label: 'Discounted ROI', value: roi != null ? `${roi.toFixed(0)}%` : '—' },
             ]}
           />
-          <PnlTable pnl={yearlyPnl(own, roiModels)} title="Platform P&L" />
+          <PnlTable pnl={yearlyPnl(own, roiFor)} title="Platform P&L" />
         </div>
 
         <aside aria-label={`${platform.name} projects`}>
@@ -98,8 +100,7 @@ export default function PlatformPage() {
           </h3>
           <ul className="space-y-2">
             {own.map((p) => {
-              const model = roiModels[p.id];
-              const npv = model ? computeRoi(model).npv : null;
+              const npv = roiFor(p.id)?.npv ?? null;
               return (
                 <li key={p.id}>
                   <Link

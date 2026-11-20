@@ -61,9 +61,7 @@ export default function SummaryPage() {
 
   return (
     <>
-      <PageHeader title="Portfolio summary" subtitle="Every product platform side by side. Lifetime totals from each project’s ROI model, in $ thousands." />
-
-      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <PageHeader title="Portfolio summary" subtitle="Every product platform side by side. Lifetime totals from each project’s ROI model, in $ thousands.">
         <PmFilter />
         <div className="flex items-center gap-2 text-[13px] text-moss-600">
           Group by
@@ -88,7 +86,7 @@ export default function SummaryPage() {
             })}
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       <KpiStrip
         items={[

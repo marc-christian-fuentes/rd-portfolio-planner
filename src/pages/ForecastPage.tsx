@@ -32,9 +32,7 @@ export default function ForecastPage() {
       <PageHeader
         title="Forecast"
         subtitle="What the R&D portfolio feeds into the corporate P&L, year by year, and the cash flow behind it. Pre-tax, in $ thousands."
-      />
-
-      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+      >
         <PmFilter />
         <FilterSelect
           label="Platform"
@@ -42,7 +40,7 @@ export default function ForecastPage() {
           onChange={setPlatformId}
           options={[{ value: 'all', label: 'All' }, ...data.platforms.map((pl) => ({ value: pl.id, label: pl.name }))]}
         />
-      </div>
+      </PageHeader>
 
       <KpiStrip
         items={[

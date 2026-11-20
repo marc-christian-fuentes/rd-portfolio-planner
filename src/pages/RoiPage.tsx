@@ -25,12 +25,21 @@ export default function RoiPage() {
   const inTab = projects.filter((p) => p.phase === phase);
   const selected = projects.find((p) => p.id === projectId) ?? inTab[0];
   const platformName = (id: string) => data.platforms.find((pl) => pl.id === id)?.name ?? '—';
+  const selectedModel = selected ? roiModels[selected.id] : undefined;
 
   return (
     <>
       <PageHeader
         title="Project view · ROI calculator"
         subtitle="Pick a project to see its cash flow model. Product managers build and edit models for their own projects; every figure updates as you type."
+        aside={
+          selected && (
+            <span className="text-[13px] text-moss-600">
+              <span className="font-semibold text-moss-900">{selected.name}</span>
+              <span className="num"> · NPV {selectedModel ? formatK(computeRoi(selectedModel).npv) : 'no model yet'}</span>
+            </span>
+          )
+        }
       />
 
       <Panel>

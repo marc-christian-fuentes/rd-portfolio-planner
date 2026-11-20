@@ -23,8 +23,9 @@ export default function RoadmapPage() {
   if (projects.length === 0) {
     return (
       <>
-        <PageHeader title="Roadmap" />
-        <PmFilter />
+        <PageHeader title="Roadmap">
+          <PmFilter />
+        </PageHeader>
         <p className="mt-4 text-[13px] text-moss-500">No projects for this selection.</p>
       </>
     );
@@ -48,9 +49,7 @@ export default function RoadmapPage() {
 
   return (
     <>
-      <PageHeader title="Roadmap" subtitle="Every project on one timeline: when it starts, how long it runs, and its phase. Click a bar to open the project." />
-
-      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <PageHeader title="Roadmap" subtitle="Every project on one timeline: when it starts, how long it runs, and its phase. Click a bar to open the project.">
         <PmFilter />
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-moss-600" aria-label="Phase colours">
           {PHASES.map((ph) => (
@@ -60,7 +59,7 @@ export default function RoadmapPage() {
             </li>
           ))}
         </ul>
-      </div>
+      </PageHeader>
 
       <div className="rounded-[10px] border border-moss-200 bg-white p-4">
         {/* Year axis */}

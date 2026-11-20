@@ -53,11 +53,32 @@ export function Panel({ title, aside, children }: { title?: ReactNode; aside?: R
   );
 }
 
-export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+/**
+ * Page title, subtitle and (optionally) the page's filters.
+ * On desktop it stays pinned under the top bar while the page scrolls,
+ * so you always know where you are and can change filters.
+ */
+export function PageHeader({
+  title,
+  subtitle,
+  aside,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  /** Shown to the right of the title, e.g. the selected project. */
+  aside?: ReactNode;
+  /** Filters, shown under the subtitle. */
+  children?: ReactNode;
+}) {
   return (
-    <div className="mb-5">
-      <h1 className="text-[22px] leading-tight font-semibold text-moss-900">{title}</h1>
+    <div className="z-[5] -mx-2 mb-5 border-b border-moss-200 bg-moss-50 px-2 pt-2 pb-4 md:sticky md:top-12">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <h1 className="text-[22px] leading-tight font-semibold text-moss-900">{title}</h1>
+        {aside}
+      </div>
       {subtitle && <p className="mt-1 max-w-3xl text-[13px] text-moss-500">{subtitle}</p>}
+      {children && <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">{children}</div>}
     </div>
   );
 }

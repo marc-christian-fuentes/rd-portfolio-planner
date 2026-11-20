@@ -36,10 +36,9 @@ export default function PlatformPage() {
     if (platforms.length === 0) {
       return (
         <>
-          <PageHeader title="Platform view" />
-          <div className="mb-4">
+          <PageHeader title="Platform view">
             <PmFilter />
-          </div>
+          </PageHeader>
           <Panel>
             <p className="px-4 py-5 text-[13px] text-moss-500">No platforms for this selection.</p>
           </Panel>
@@ -57,9 +56,7 @@ export default function PlatformPage() {
 
   return (
     <>
-      <PageHeader title="Platform view" subtitle="One product platform’s rolled-up P&L, including cost-only projects, with its projects alongside." />
-
-      <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+      <PageHeader title="Platform view" subtitle="One product platform’s rolled-up P&L, including cost-only projects, with its projects alongside.">
         <FilterSelect
           label="Platform"
           value={platform.id}
@@ -70,7 +67,7 @@ export default function PlatformPage() {
           }))}
         />
         <PmFilter />
-      </div>
+      </PageHeader>
 
       <div className="mb-5 rounded-[10px] border border-moss-200 bg-white">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">

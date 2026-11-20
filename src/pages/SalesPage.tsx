@@ -26,6 +26,7 @@ import { KpiStrip, PageHeader, Panel, Tag, right, table, td, th } from '../compo
 import { FilterSelect, useQueryParam } from '../components/Filters';
 import { PHASE_TABS } from '../components/PhaseTabs';
 import { NumberInput } from '../components/NumberInput';
+import { unitCostOf } from '../data/unitcost';
 
 const TENTATIVE: Phase[] = ['Proposed', 'Approved'];
 const int = (v: number) => Math.round(v).toLocaleString('en-US');
@@ -229,7 +230,7 @@ function Segmented<T extends string>({
 }
 
 function PlanEditor({ project, plan, canEdit }: { project: Project; plan: RevenuePlan; canEdit: boolean }) {
-  const { data, role, updateRevenuePlan, setPlanUnits, setPlanGranularity } = useApp();
+  const { data, role, unitCosts, updateRevenuePlan, setPlanUnits, setPlanGranularity } = useApp();
   const planYears = usePlanYears();
   const hardwareUnits = useHardwareUnits();
   const years = planYears(project);
@@ -242,6 +243,9 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
   const peak = rows.reduce((best, r) => (r.revenue > best.revenue ? r : best), rows[0]);
   const price = priceOf(plan, project);
   const margin = project.grossMarginPct ?? 0;
+  // COGS v2: an itemised unit cost from Manufacturing replaces the margin estimate.
+  const unitCost = unitCostOf(unitCosts, project.id);
+  const cogsOf = (r: RevenueYear) => (unitCost !== null ? (r.billedUnits * unitCost) / 1000 : r.revenue * (1 - margin / 100));
   const showCosts = role !== 'Sales';
   const hardwareOptions = data.projects.filter((p) => p.type === 'revenue' && p.component === 'hardware' && !p.recurring && p.id !== project.id);
   const field = 'flex items-center gap-2 text-[13px] text-moss-700';
@@ -255,7 +259,7 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
           { label: `Peak year (${peak.year})`, value: formatK(peak.revenue) },
           { label: plan.priceOverride != null ? 'Price (Sales override)' : 'Price (project default)', value: formatMoney(price) },
           showCosts
-            ? { label: 'COGS method', value: `Margin ${margin}%` }
+            ? { label: 'COGS method', value: unitCost !== null ? `Itemised $${unitCost.toFixed(2)}` : `Margin ${margin}%` }
             : {
                 label: plan.recurringMode === 'none' ? 'Units, peak year' : 'Subscribers, peak year',
                 value: int(Math.max(...rows.map((r) => r.billedUnits))),
@@ -435,8 +439,13 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
                 <Row label="Revenue" values={rows.map((r) => r.revenue)} fmt={int} total strong />
                 {showCosts && (
                   <>
-                    <Row label={`Cost of goods sold (${100 - margin}% of revenue)`} values={rows.map((r) => -r.revenue * (1 - margin / 100))} fmt={acct} total />
-                    <Row label="Gross profit" values={rows.map((r) => r.revenue * (margin / 100))} fmt={int} total strong />
+                    <Row
+                      label={unitCost !== null ? `Cost of goods sold (itemised, $${unitCost.toFixed(2)} a unit)` : `Cost of goods sold (${100 - margin}% of revenue)`}
+                      values={rows.map((r) => -cogsOf(r))}
+                      fmt={acct}
+                      total
+                    />
+                    <Row label="Gross profit" values={rows.map((r) => r.revenue - cogsOf(r))} fmt={int} total strong />
                   </>
                 )}
               </tbody>
@@ -444,7 +453,9 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
           </div>
           <p className="border-t border-moss-200 px-4 py-2.5 text-[12px] text-moss-500">
             {showCosts
-              ? `COGS uses the project’s fixed gross margin (${margin}%), so it moves with price. Itemised unit costs replace it once Manufacturing builds them (step 7.7).`
+              ? unitCost !== null
+                ? `COGS uses Manufacturing’s itemised unit cost ($${unitCost.toFixed(2)}), so a lower price squeezes margin.`
+                : `COGS uses the project’s fixed gross margin estimate (${margin}%), so it moves with price. It switches to itemised costs once Manufacturing builds a breakdown.`
               : 'Sales sees revenue only. Costs are handled by Finance and project management.'}
           </p>
         </Panel>

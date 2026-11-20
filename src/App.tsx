@@ -17,6 +17,7 @@ import CapacityPage from './pages/CapacityPage';
 import SalesPage from './pages/SalesPage';
 import SubmissionPage from './pages/SubmissionPage';
 import PrioritisationPage from './pages/PrioritisationPage';
+import ManufacturingPage from './pages/ManufacturingPage';
 import AdminPage from './pages/AdminPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import { canSee, homePath, type SectionId } from './data/access';
@@ -53,7 +54,7 @@ export default function App() {
           <Route path="/planning/submit" element={page('submission', <SubmissionPage />)} />
           <Route path="/planning/prioritise" element={page('prioritisation', <PrioritisationPage />)} />
 
-          <Route path="/manufacturing" element={placeholder('manufacturing')} />
+          <Route path="/manufacturing" element={page('manufacturing', <ManufacturingPage />)} />
 
           {/* Project management */}
           <Route path="/resourcing" element={page('resourcing', <ResourcingPage />)} />

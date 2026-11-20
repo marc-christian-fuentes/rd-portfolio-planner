@@ -14,6 +14,8 @@ import { persist } from 'zustand/middleware';
 import { seed, seedAllocations, seedCostLines } from './data/seed';
 import type { Allocation, CostLine, Granularity, PlanStage, ProposedHire, QuarterlyPlan, RevenuePlan, Role, RoiModel, RoiYear, SeedData } from './data/types';
 import { PLAN_STAGES, seedPlan } from './data/planning';
+import { applyUnitCost, seedUnitCosts, unitCostOf } from './data/unitcost';
+import type { CostCategory, UnitCostItem } from './data/types';
 import { peopleForRole } from './data/access';
 import { MAX_YEARS, MIN_YEARS, computeRoi, createDefaultRoiModel, seedRoiModels } from './data/roi';
 import { currentStep, hireCostsForModel, nextStatus } from './data/resourcing';
@@ -43,6 +45,8 @@ interface AppState {
   revenuePlans: Record<string, RevenuePlan>;
   /** This quarter's R&D plan. */
   plan: QuarterlyPlan;
+  /** Manufacturing's per-unit cost breakdowns, all products. */
+  unitCosts: UnitCostItem[];
 
   setRole: (role: Role) => void;
   setActingAs: (personId: string) => void;
@@ -73,6 +77,12 @@ interface AppState {
   proposePullIn: (projectId: string, reason: string) => void;
   decidePullIn: (pullInId: string, approve: boolean) => void;
   restartPlan: () => void;
+
+  startUnitCost: (projectId: string, estimate: number | null) => void;
+  addUnitCostItem: (projectId: string) => void;
+  updateUnitCostItem: (id: string, patch: Partial<Pick<UnitCostItem, 'component' | 'category' | 'quantity' | 'unitCost'>>) => void;
+  removeUnitCostItem: (id: string) => void;
+  clearUnitCost: (projectId: string) => void;
 }
 
 export const useApp = create<AppState>()(
@@ -104,6 +114,7 @@ export const useApp = create<AppState>()(
         includePendingHires: true,
         revenuePlans: seedRevenuePlans(seed.projects, seededModels),
         plan: seedPlan(goalOf),
+        unitCosts: seedUnitCosts,
 
         setRole: (role) => set({ role, actingAsId: peopleForRole(get().data, role)[0]?.id ?? '' }),
         setActingAs: (actingAsId) => set({ actingAsId }),
@@ -270,6 +281,32 @@ export const useApp = create<AppState>()(
         },
         restartPlan: () => set({ plan: seedPlan(goalOf) }),
 
+        // ---------- Unit cost builder ----------
+
+        startUnitCost: (projectId, estimate) => {
+          if (get().unitCosts.some((i) => i.projectId === projectId)) return;
+          const line = (component: string, category: CostCategory, unitCost: number): UnitCostItem => ({
+            id: newId('uc') + Math.random().toString(36).slice(2, 5),
+            projectId,
+            component,
+            category,
+            quantity: 1,
+            unitCost,
+          });
+          // Starts from the margin estimate as one line, ready to be broken down.
+          set({ unitCosts: [...get().unitCosts, line('Estimated unit cost (break this down)', 'Materials', Math.round((estimate ?? 0) * 100) / 100)] });
+        },
+        addUnitCostItem: (projectId) =>
+          set({
+            unitCosts: [
+              ...get().unitCosts,
+              { id: newId('uc') + Math.random().toString(36).slice(2, 5), projectId, component: 'New component', category: 'Materials', quantity: 1, unitCost: 0 },
+            ],
+          }),
+        updateUnitCostItem: (id, patch) => set({ unitCosts: get().unitCosts.map((i) => (i.id === id ? { ...i, ...patch } : i)) }),
+        removeUnitCostItem: (id) => set({ unitCosts: get().unitCosts.filter((i) => i.id !== id) }),
+        clearUnitCost: (projectId) => set({ unitCosts: get().unitCosts.filter((i) => i.projectId !== projectId) }),
+
         setPlanGranularity: (projectId, granularity, years) => {
           const plan = get().revenuePlans[projectId];
           if (!plan || plan.granularity === granularity) return;
@@ -284,10 +321,11 @@ export const useApp = create<AppState>()(
     },
     {
       name: 'rdpp-session',
-      version: 6,
+      version: 7,
       partialize: (s) => ({
         revenuePlans: s.revenuePlans,
         plan: s.plan,
+        unitCosts: s.unitCosts,
         role: s.role,
         actingAsId: s.actingAsId,
         roiModels: s.roiModels,
@@ -311,13 +349,15 @@ export const useApp = create<AppState>()(
           revenuePlans: s.revenuePlans ?? seedRevenuePlans(seed.projects, seededModels),
           // Version 6 added the quarterly plan (older saves had a different shape).
           plan: version < 6 || !s.plan ? seedPlan(goalOf) : s.plan,
+          // Version 7 added unit cost breakdowns.
+          unitCosts: s.unitCosts ?? seedUnitCosts,
         } as AppState;
       },
     },
   ),
 );
 
-type ModelState = Pick<AppState, 'data' | 'roiModels' | 'revenuePlans'>;
+type ModelState = Pick<AppState, 'data' | 'roiModels' | 'revenuePlans' | 'unitCosts'>;
 
 /** A hardware project's units for the given years: from its sales plan, or else its ROI model. */
 function unitsForYears(state: ModelState, projectId: string, years: number[]): number[] {
@@ -328,17 +368,23 @@ function unitsForYears(state: ModelState, projectId: string, years: number[]): n
 }
 
 /**
- * The ROI model as actually used: if Sales has a revenue plan for the
- * project, its units and price replace the ones typed into the model.
+ * The ROI model as actually used (one shared model):
+ *  1. if Sales has a revenue plan, its units and price replace the typed ones;
+ *  2. if Manufacturing has a unit cost breakdown, it replaces the margin estimate.
  */
 export function effectiveModel(state: ModelState, projectId: string): RoiModel | undefined {
-  const model = state.roiModels[projectId];
+  let model = state.roiModels[projectId];
   const plan = state.revenuePlans[projectId];
   const project = state.data.projects.find((p) => p.id === projectId);
-  if (!model || !plan || !project) return model;
-  const years = model.years.map((_, i) => model.startYear + i);
-  const hardware = plan.linkedHardwareProjectId ? unitsForYears(state, plan.linkedHardwareProjectId, years) : [];
-  return applyRevenuePlan(model, plan, project, hardware);
+  if (!model || !project) return model;
+  if (plan) {
+    const years = model.years.map((_, i) => model!.startYear + i);
+    const hardware = plan.linkedHardwareProjectId ? unitsForYears(state, plan.linkedHardwareProjectId, years) : [];
+    model = applyRevenuePlan(model, plan, project, hardware);
+  }
+  const unitCost = unitCostOf(state.unitCosts, projectId);
+  if (unitCost !== null) model = applyUnitCost(model, unitCost);
+  return model;
 }
 
 /** Linked plans need the hardware units for the plan's years. */
@@ -346,7 +392,8 @@ export function useHardwareUnits(): (projectId: string, years: number[]) => numb
   const data = useApp((s) => s.data);
   const roiModels = useApp((s) => s.roiModels);
   const revenuePlans = useApp((s) => s.revenuePlans);
-  return (projectId, years) => unitsForYears({ data, roiModels, revenuePlans }, projectId, years);
+  const unitCosts = useApp((s) => s.unitCosts);
+  return (projectId, years) => unitsForYears({ data, roiModels, revenuePlans, unitCosts }, projectId, years);
 }
 
 /**
@@ -358,10 +405,11 @@ export function useRoiFor(): RoiLookup {
   const data = useApp((s) => s.data);
   const roiModels = useApp((s) => s.roiModels);
   const revenuePlans = useApp((s) => s.revenuePlans);
+  const unitCosts = useApp((s) => s.unitCosts);
   const hires = useApp((s) => s.hires);
   const includePending = useApp((s) => s.includePendingHires);
   return (projectId) => {
-    const model = effectiveModel({ data, roiModels, revenuePlans }, projectId);
+    const model = effectiveModel({ data, roiModels, revenuePlans, unitCosts }, projectId);
     const project = data.projects.find((p) => p.id === projectId);
     if (!model || !project) return null;
     return computeRoi(model, hireCostsForModel(project, model, hires, data.departments, includePending));

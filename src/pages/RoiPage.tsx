@@ -11,6 +11,7 @@ import { durationMonths, formatDate, formatDay, personName, scheduleStatus } fro
 import { MAX_YEARS, MIN_YEARS, formatK, type RoiResult, type RoiRow } from '../data/roi';
 import type { Project, RoiModel, RoiYear } from '../data/types';
 import { effectiveModel, useApp, useRoiFor } from '../store';
+import { unitCostOf } from '../data/unitcost';
 import { HiresToggle } from '../components/Filters';
 import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
 import { PhaseTabs, usePhaseTab, withPhase } from '../components/PhaseTabs';
@@ -317,7 +318,7 @@ function fmt(v: number, f: Format): string {
     case 'price':
       return `$${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
     case 'pct':
-      return `${v}%`;
+      return `${Math.round(v * 10) / 10}%`;
     case 'factor':
       return v.toFixed(3);
   }
@@ -331,6 +332,8 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
   const plan = state.revenuePlans[project.id];
   const effective = effectiveModel(state, project.id) ?? model;
   const unitsLabel = plan?.recurringMode && plan.recurringMode !== 'none' ? 'Active subscribers' : 'Units sold';
+  // With a unit cost breakdown, the margin comes from Manufacturing instead of the estimate.
+  const unitCost = unitCostOf(state.unitCosts, project.id);
 
   const rows: RowDef[] = [
     ...(revenue
@@ -338,7 +341,13 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
           { label: plan ? `${unitsLabel} · from sales plan` : 'Units sold', input: 'units', format: 'int', total: true, fromPlan: !!plan },
           { label: plan ? 'Price per unit ($) · from sales plan' : 'Price per unit ($)', input: 'price', format: 'price', total: false, fromPlan: !!plan },
           { label: 'Revenue', calc: 'revenue', format: 'money', total: true },
-          { label: 'Gross margin (%)', input: 'marginPct', format: 'pct', total: false },
+          {
+            label: unitCost !== null ? 'Gross margin (%) · from unit cost builder' : 'Gross margin (%) · estimate',
+            input: 'marginPct',
+            format: 'pct',
+            total: false,
+            fromPlan: unitCost !== null,
+          },
           { label: 'Cost of goods sold', calc: 'cogs', format: 'money', total: true, negate: true },
           { label: 'Gross profit', calc: 'grossProfit', format: 'money', total: true, strong: true },
         ]
@@ -361,8 +370,19 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
     <Panel
       title="Cash flow model"
       aside={
-        <span className="text-[12px] text-moss-500">
-          $ thousands · <span className="text-slateblue">blue = input</span> · black = calculated
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-moss-500">
+          {revenue && (
+            <span
+              className={`rounded-full px-2 py-px font-medium ${
+                unitCost !== null ? 'bg-moss-800 text-white' : 'border border-ochre/60 text-ochre'
+              }`}
+            >
+              {unitCost !== null ? `COGS: itemised $${unitCost.toFixed(2)}/unit` : 'COGS: margin estimate'}
+            </span>
+          )}
+          <span>
+            $ thousands · <span className="text-slateblue">blue = input</span> · black = calculated
+          </span>
         </span>
       }
     >

@@ -283,11 +283,17 @@ export interface Comment {
   at: ISODate;
 }
 
+export type CostCategory = 'Materials' | 'Labour' | 'Overhead & logistics';
+
+/** One line of a product's per-unit cost breakdown (spec section 8). */
 export interface UnitCostItem {
   id: string;
   projectId: string;
   component: string;
+  category: CostCategory;
+  /** How many per finished unit (e.g. 0.35 hours of assembly). */
   quantity: number;
+  /** $ per item (not thousands). */
   unitCost: number;
 }
 

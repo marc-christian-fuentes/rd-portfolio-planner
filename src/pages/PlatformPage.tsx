@@ -10,8 +10,8 @@ import { isPlatformLaunched, personName } from '../data/model';
 import { computeRoi, formatK } from '../data/roi';
 import { roiPctOf, totalCostOf, totalsFor, yearlyPnl } from '../data/rollup';
 import { useApp } from '../store';
-import { KpiStrip, PageHeader, Panel, PhaseMarker, Tabs, Tag } from '../components/ui';
-import { PmFilter, byPm, usePmFilter } from '../components/Filters';
+import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag } from '../components/ui';
+import { FilterSelect, PmFilter, byPm, usePmFilter } from '../components/Filters';
 import { PnlTable } from '../components/PnlTable';
 import { PHASE_TABS } from '../components/PhaseTabs';
 
@@ -60,16 +60,19 @@ export default function PlatformPage() {
       <PageHeader title="Platform view" subtitle="One product platform’s rolled-up P&L, including cost-only projects, with its projects alongside." />
 
       <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <FilterSelect
+          label="Platform"
+          value={platform.id}
+          onChange={(id) => navigate(`/platform/${id}${search}`)}
+          options={platforms.map((pl) => ({
+            value: pl.id,
+            label: `${pl.name} (${projects.filter((p) => p.platformId === pl.id).length})`,
+          }))}
+        />
         <PmFilter />
       </div>
 
-      <div className="mb-5 overflow-hidden rounded-[10px] border border-moss-200 bg-white">
-        <Tabs
-          label="Product platform"
-          tabs={platforms.map((pl) => ({ id: pl.id, label: pl.name, count: projects.filter((p) => p.platformId === pl.id).length }))}
-          active={platform.id}
-          onChange={(id) => navigate(`/platform/${id}${search}`)}
-        />
+      <div className="mb-5 rounded-[10px] border border-moss-200 bg-white">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
           <h2 className="text-lg font-semibold text-moss-900">{platform.name}</h2>
           <Tag tone={isPlatformLaunched(data, platform) ? 'solid' : 'neutral'}>{isPlatformLaunched(data, platform) ? 'Launched' : 'In progress'}</Tag>

@@ -19,7 +19,7 @@ const PHASE_COLOR: Record<Phase, string> = {
 export function PhaseMarker({ phase }: { phase: Phase }) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span className={`inline-block size-2 ${PHASE_COLOR[phase]}`} aria-hidden="true" />
+      <span className={`inline-block size-2 rounded-full ${PHASE_COLOR[phase]}`} aria-hidden="true" />
       {phase}
     </span>
   );
@@ -32,7 +32,7 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
     solid: 'border-moss-800 bg-moss-800 text-moss-50',
   };
   return (
-    <span className={`inline-block whitespace-nowrap rounded border px-1.5 py-px text-[11px] font-medium ${tones[tone]}`}>
+    <span className={`inline-block whitespace-nowrap rounded-full border px-2 py-px text-[11px] font-medium ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -41,7 +41,7 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
 /** A white panel with a hairline border and an optional title strip. */
 export function Panel({ title, aside, children }: { title?: ReactNode; aside?: ReactNode; children: ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-md border border-moss-200 bg-white">
+    <section className="overflow-hidden rounded-[10px] border border-moss-200 bg-white">
       {title && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-moss-200 px-4 py-2.5">
           <h2 className="text-[15px] font-semibold text-moss-900">{title}</h2>
@@ -67,7 +67,7 @@ export function KpiStrip({ items }: { items: { label: string; value: string }[] 
   return (
     <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
       {items.map((k) => (
-        <div key={k.label} className="rounded-md border border-moss-200 bg-white px-4 py-3">
+        <div key={k.label} className="rounded-[10px] border border-moss-200 bg-white px-4 py-3">
           <div className="text-[12px] text-moss-500">{k.label}</div>
           <div className="num mt-0.5 text-[22px] leading-tight font-semibold text-moss-900">{k.value}</div>
         </div>
@@ -114,7 +114,7 @@ export function Tabs<T extends string>({
             {t.label}
             {t.count !== undefined && (
               <span
-                className={`num min-w-5 rounded px-1 text-center text-[11px] ${
+                className={`num min-w-5 rounded-full px-1.5 text-center text-[11px] ${
                   selected ? 'bg-moss-800 text-moss-50' : 'bg-moss-100 text-moss-700'
                 }`}
               >

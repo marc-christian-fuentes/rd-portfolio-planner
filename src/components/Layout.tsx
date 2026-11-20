@@ -11,7 +11,7 @@ import { useApp } from '../store';
 import { usePhaseTab, withPhase } from './PhaseTabs';
 
 const selectClass =
-  'rounded border border-moss-600 bg-moss-700 px-2 py-1 text-[13px] text-white focus:outline focus:outline-2 focus:outline-sage-300';
+  'rounded-md border border-moss-600 bg-moss-700 px-2 py-1 text-[13px] text-white focus:outline focus:outline-2 focus:outline-sage-300';
 
 export default function Layout() {
   const { data, role, actingAsId, setRole, setActingAs } = useApp();
@@ -63,7 +63,7 @@ export default function Layout() {
                 to={withPhase(s.path, phase)}
                 end={s.path === '/'}
                 className={({ isActive }) =>
-                  `whitespace-nowrap rounded-md px-3 py-1.5 text-[13px] ${
+                  `whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] ${
                     isActive ? 'bg-white font-semibold text-moss-900 shadow-[0_0_0_1px_var(--color-sage-200)]' : 'text-moss-700 hover:bg-sage-200/60 hover:text-moss-900'
                   }`
                 }

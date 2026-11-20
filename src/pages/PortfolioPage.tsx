@@ -60,7 +60,7 @@ export default function PortfolioPage() {
           const hidden = column.length - shown.length;
           return (
             <section key={phase} aria-label={`${phase}, ${column.length} projects`} className="min-w-0">
-              <h2 className="rounded-md bg-moss-100 px-3 py-1.5 text-[13px] font-semibold text-moss-900">
+              <h2 className="rounded-lg bg-moss-100 px-3 py-1.5 text-[13px] font-semibold text-moss-900">
                 {SHORT[phase]} <span className="num font-normal text-moss-500">· {column.length}</span>
               </h2>
               <p className="h-6 px-1 pt-1 text-[12px] text-moss-500">{TENTATIVE.includes(phase) ? 'Tentative' : ''}</p>
@@ -72,7 +72,7 @@ export default function PortfolioPage() {
                     <li key={p.id}>
                       <Link
                         to={`/roi/${p.id}?phase=${encodeURIComponent(phase)}`}
-                        className="block rounded-md border border-moss-200 bg-white px-3 py-2 hover:border-moss-500 focus-visible:outline-2 focus-visible:outline-moss-600"
+                        className="block rounded-lg border border-moss-200 bg-white px-3 py-2 hover:border-moss-500 focus-visible:outline-2 focus-visible:outline-moss-600"
                       >
                         <div className="text-[13px] leading-snug font-semibold text-moss-900">{p.name}</div>
                         <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[12px] text-moss-500">

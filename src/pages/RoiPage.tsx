@@ -101,12 +101,12 @@ function ProjectRoi({ project }: { project: Project }) {
       </div>
 
       {!model ? (
-        <div className="border border-dashed border-moss-300 bg-white px-4 py-5 text-[13px] text-moss-700">
+        <div className="rounded-[10px] border border-dashed border-moss-300 bg-white px-4 py-5 text-[13px] text-moss-700">
           <p className="mb-3">This project has no ROI model yet.</p>
           {canEdit ? (
             <button
               onClick={() => createRoiModel(project.id)}
-              className="bg-moss-800 px-3 py-1.5 text-[13px] font-medium text-moss-50 hover:bg-moss-700"
+              className="rounded-md bg-moss-800 px-3 py-1.5 text-[13px] font-medium text-moss-50 hover:bg-moss-700"
             >
               Create ROI model
             </button>
@@ -163,7 +163,7 @@ function Assumptions({ project, model, canEdit }: { project: Project; model: Roi
 
         <div className={field}>
           Discounting
-          <div className="flex" role="group" aria-label="Discounting convention">
+          <div className="flex overflow-hidden rounded-md" role="group" aria-label="Discounting convention">
             {(['mid-year', 'end-of-year'] as const).map((c) => {
               const on = model.convention === c;
               return (
@@ -172,7 +172,7 @@ function Assumptions({ project, model, canEdit }: { project: Project; model: Roi
                   disabled={!canEdit}
                   aria-pressed={on}
                   onClick={() => updateRoiModel(project.id, { convention: c })}
-                  className={`border px-2.5 py-0.5 text-[12px] first:border-r-0 ${
+                  className={`border px-2.5 py-0.5 text-[12px] first:rounded-l-md first:border-r-0 last:rounded-r-md ${
                     on ? 'border-moss-800 bg-moss-800 text-moss-50' : 'border-moss-300 bg-white text-moss-700'
                   } ${canEdit && !on ? 'hover:bg-moss-50' : ''} disabled:cursor-default`}
                 >
@@ -199,7 +199,7 @@ function Assumptions({ project, model, canEdit }: { project: Project; model: Roi
               aria-label="Remove a year"
               disabled={model.years.length <= MIN_YEARS}
               onClick={() => setRoiHorizon(project.id, model.years.length - 1)}
-              className="size-6 border border-moss-300 bg-white leading-none hover:bg-moss-50 disabled:opacity-40"
+              className="size-6 rounded-md border border-moss-300 bg-white leading-none hover:bg-moss-50 disabled:opacity-40"
             >
               −
             </button>
@@ -210,7 +210,7 @@ function Assumptions({ project, model, canEdit }: { project: Project; model: Roi
               aria-label="Add a year"
               disabled={model.years.length >= MAX_YEARS}
               onClick={() => setRoiHorizon(project.id, model.years.length + 1)}
-              className="size-6 border border-moss-300 bg-white leading-none hover:bg-moss-50 disabled:opacity-40"
+              className="size-6 rounded-md border border-moss-300 bg-white leading-none hover:bg-moss-50 disabled:opacity-40"
             >
               +
             </button>

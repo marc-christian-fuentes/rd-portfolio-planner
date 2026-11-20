@@ -23,8 +23,8 @@ export default function AdminPage() {
 
       <div className="space-y-4">
         <div
-          className={`border-l-[3px] px-4 py-2 text-[13px] ${
-            problems.length ? 'border-rust bg-white text-rust' : 'border-moss-600 bg-white text-moss-800'
+          className={`rounded-[10px] border px-4 py-2.5 text-[13px] ${
+            problems.length ? 'border-rust/40 bg-white text-rust' : 'border-sage-300 bg-sage-50 text-moss-800'
           }`}
         >
           {problems.length === 0 ? (
@@ -64,8 +64,8 @@ export default function AdminPage() {
                       const a = ACCESS[s.id][r];
                       return (
                         <td key={r} className={`${td} num text-center`}>
-                          {a === 'edit' && <span className="inline-block w-5 bg-moss-800 text-moss-50">E</span>}
-                          {a === 'view' && <span className="inline-block w-5 border border-moss-300 text-moss-600">V</span>}
+                          {a === 'edit' && <span className="inline-block w-5 rounded-md bg-moss-800 text-moss-50">E</span>}
+                          {a === 'view' && <span className="inline-block w-5 rounded-md border border-moss-300 text-moss-600">V</span>}
                         </td>
                       );
                     })}

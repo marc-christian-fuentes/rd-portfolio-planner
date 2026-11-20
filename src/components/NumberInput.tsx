@@ -52,7 +52,7 @@ export function NumberInput({
         if (max !== undefined) v = Math.min(max, v);
         onChange(v);
       }}
-      className={`num border border-moss-200 bg-moss-50 px-1.5 py-0.5 text-right text-[13px] text-slateblue hover:border-moss-400 focus:border-moss-600 focus:bg-white focus:outline-none ${className}`}
+      className={`num rounded-md border border-moss-200 bg-moss-50 px-1.5 py-0.5 text-right text-[13px] text-slateblue hover:border-moss-400 focus:border-moss-600 focus:bg-white focus:outline-none ${className}`}
     />
   );
 }

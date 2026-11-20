@@ -59,7 +59,10 @@ export default function AdminPage() {
               <tbody>
                 {SECTIONS.map((s) => (
                   <tr key={s.id} className="hover:bg-moss-50">
-                    <td className={`${td} font-medium`}>{s.label}</td>
+                    <td className={`${td} font-medium whitespace-nowrap`}>
+                      {s.group && <span className="font-normal text-moss-500">{s.group} · </span>}
+                      {s.label}
+                    </td>
                     {ROLES.map((r) => {
                       const a = ACCESS[s.id][r];
                       return (

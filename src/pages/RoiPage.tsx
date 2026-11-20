@@ -29,12 +29,12 @@ export default function RoiPage() {
   return (
     <>
       <PageHeader
-        title="ROI calculator"
+        title="Project view · ROI calculator"
         subtitle="Pick a project to see its cash flow model. Product managers build and edit models for their own projects; every figure updates as you type."
       />
 
       <Panel>
-        <PhaseTabs projects={projects} active={phase} onChange={(p) => navigate(withPhase('/roi', p), { replace: true })} />
+        <PhaseTabs projects={projects} active={phase} onChange={(p) => navigate(withPhase('/project', p), { replace: true })} />
         <div role="tabpanel" aria-label={phase} className="overflow-x-auto">
           {inTab.length === 0 ? (
             <p className="px-4 py-5 text-[13px] text-moss-500">No projects in {phase} for this role.</p>
@@ -57,7 +57,7 @@ export default function RoiPage() {
                   return (
                     <tr
                       key={p.id}
-                      onClick={() => navigate(withPhase(`/roi/${p.id}`, phase))}
+                      onClick={() => navigate(withPhase(`/project/${p.id}`, phase))}
                       className={`cursor-pointer ${isSelected ? 'bg-moss-100' : 'hover:bg-moss-50'}`}
                     >
                       <td className={`${td} ${isSelected ? 'shadow-[inset_3px_0_0_var(--color-moss-600)]' : ''}`}>

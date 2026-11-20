@@ -4,11 +4,18 @@
  * Dark green top bar with the role switcher, a light green side menu that
  * only lists the pages the current role may see, and the page on the right.
  */
-import { NavLink, Outlet } from 'react-router-dom';
+import { Fragment } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ROLES, type Role } from '../data/types';
 import { ROLE_SUMMARY, SECTIONS, canSee, peopleForRole } from '../data/access';
 import { useApp } from '../store';
 import { usePhaseTab, withPhase } from './PhaseTabs';
+
+/** Carries the ?pm= product manager filter onto menu links. */
+function keepFilters(search: string): string {
+  const pm = new URLSearchParams(search).get('pm');
+  return pm ? `${search.includes('phase=') ? '&' : '?'}pm=${pm}` : '';
+}
 
 const selectClass =
   'rounded-md border border-moss-600 bg-moss-700 px-2 py-1 text-[13px] text-white focus:outline focus:outline-2 focus:outline-sage-300';
@@ -16,8 +23,9 @@ const selectClass =
 export default function Layout() {
   const { data, role, actingAsId, setRole, setActingAs } = useApp();
   const actors = peopleForRole(data, role);
-  // Keep the open phase tab when moving between pages.
+  // Keep the open phase tab and the product manager filter when moving between pages.
   const [phase] = usePhaseTab();
+  const { search } = useLocation();
 
   return (
     <div className="min-h-screen">
@@ -56,21 +64,31 @@ export default function Layout() {
 
       <div className="md:flex">
         <aside className="border-b border-sage-200 bg-sage-100 md:sticky md:top-12 md:flex md:h-[calc(100vh-3rem)] md:w-56 md:shrink-0 md:flex-col md:border-r md:border-b-0">
-          <nav className="flex gap-1 overflow-x-auto px-2 py-2 md:flex-col md:py-4">
-            {SECTIONS.filter((s) => canSee(role, s.id)).map((s) => (
-              <NavLink
-                key={s.id}
-                to={withPhase(s.path, phase)}
-                end={s.path === '/'}
-                className={({ isActive }) =>
-                  `whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] ${
-                    isActive ? 'bg-white font-semibold text-moss-900 shadow-[0_0_0_1px_var(--color-sage-200)]' : 'text-moss-700 hover:bg-sage-200/60 hover:text-moss-900'
-                  }`
-                }
-              >
-                {s.label}
-              </NavLink>
-            ))}
+          <nav className="flex gap-1 overflow-x-auto px-2 py-2 md:flex-col md:gap-0.5 md:overflow-y-auto md:py-4">
+            {SECTIONS.filter((s) => canSee(role, s.id)).map((s, i, list) => {
+              const startsGroup = s.group && s.group !== list[i - 1]?.group;
+              return (
+                <Fragment key={s.id}>
+                  {startsGroup && (
+                    <div className="hidden px-3 pt-3 pb-1 text-[11px] font-semibold text-moss-500 md:block">{s.group}</div>
+                  )}
+                  <NavLink
+                    to={withPhase(s.path, phase) + keepFilters(search)}
+                    end={s.path === '/'}
+                    className={({ isActive }) =>
+                      `whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] ${s.group ? 'md:ml-2' : ''} ${
+                        isActive
+                          ? 'bg-white font-semibold text-moss-900 shadow-[0_0_0_1px_var(--color-sage-200)]'
+                          : 'text-moss-700 hover:bg-sage-200/60 hover:text-moss-900'
+                      }`
+                    }
+                  >
+                    {s.group && <span className="md:hidden">{s.group}: </span>}
+                    {s.label}
+                  </NavLink>
+                </Fragment>
+              );
+            })}
           </nav>
           <p className="mt-auto hidden border-t border-sage-200 px-4 py-3 text-[12px] leading-snug text-moss-600 md:block">
             <span className="font-semibold text-moss-800">{role}</span>

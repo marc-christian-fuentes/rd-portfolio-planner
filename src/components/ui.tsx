@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import type { Phase } from '../data/types';
 
 /** Each phase gets a marker colour. Early = muted, active = olive, done = dark. */
-const PHASE_COLOR: Record<Phase, string> = {
+export const PHASE_COLOR: Record<Phase, string> = {
   Scoping: 'bg-moss-300',
   Proposed: 'bg-plum',
   Approved: 'bg-slateblue',

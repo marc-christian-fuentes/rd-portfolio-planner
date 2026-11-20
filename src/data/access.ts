@@ -8,56 +8,73 @@
 import type { Person, Project, Role, SeedData } from './types';
 
 export type SectionId =
-  | 'portfolio'
-  | 'roi'
+  | 'inbox'
+  | 'summary'
+  | 'platform'
+  | 'project'
+  | 'forecast'
+  | 'roadmap'
+  | 'submission'
+  | 'prioritisation'
+  | 'manufacturing'
   | 'resourcing'
   | 'capacity'
   | 'sales'
-  | 'planning'
-  | 'manufacturing'
   | 'assumptions'
-  | 'admin'
-  | 'inbox';
+  | 'admin';
 
 export interface Section {
   id: SectionId;
   label: string;
   path: string;
+  /** Menu heading this page sits under, e.g. "Portfolio". */
+  group?: string;
   /** Which build step (spec section 13, step 7) fills this page in. */
   step: string;
   description: string;
 }
 
+/** Menu order, top to bottom. */
 export const SECTIONS: Section[] = [
-  { id: 'portfolio', label: 'Portfolio', path: '/', step: '7.3', description: 'All product platforms and projects, with phase, type and ROI. Drill down to the ROI calculator.' },
-  { id: 'roi', label: 'ROI calculator', path: '/roi', step: '7.3', description: 'A multi-year cash flow model per project. NPV, ROI, IRR and payback update live as you type, discounted at WACC with mid-year timing.' },
-  { id: 'resourcing', label: 'Costs & resourcing', path: '/resourcing', step: '7.4', description: 'Itemise costs, assign people to projects, and turn capacity gaps into proposed hires.' },
-  { id: 'capacity', label: 'Capacity', path: '/capacity', step: '7.4', description: 'Utilisation by department and person across all projects.' },
-  { id: 'sales', label: 'Sales pipeline', path: '/sales', step: '7.5', description: 'Projects from Proposed onwards as a pipeline board, with revenue planning, recurring revenue and warranty.' },
-  { id: 'planning', label: 'Quarterly planning', path: '/planning', step: '7.6', description: 'Propose, prioritise (including Rank by comparing), resource, adjust and publish the quarter’s R&D priorities.' },
+  { id: 'inbox', label: 'Inbox', path: '/inbox', step: '7.8', description: 'Mentions, replies and pending approvals.' },
+  { id: 'summary', group: 'Portfolio', label: 'Summary', path: '/', step: '7.3', description: 'Every product platform side by side: revenue, costs, NPV and hours. Filter by product manager.' },
+  { id: 'platform', group: 'Portfolio', label: 'Platform view', path: '/platform', step: '7.3', description: 'One product platform’s rolled-up P&L, with its projects alongside.' },
+  { id: 'project', group: 'Portfolio', label: 'Project view', path: '/project', step: '7.3', description: 'The ROI calculator for each project: a multi-year cash flow model with live NPV, ROI, IRR and payback, discounted at WACC with mid-year timing.' },
+  { id: 'forecast', label: 'Forecast', path: '/forecast', step: '7.3', description: 'The P&L and cash flow that feed the corporate plan, by year and by project.' },
+  { id: 'roadmap', label: 'Roadmap', path: '/roadmap', step: '7.3', description: 'Every project on a timeline, showing when it starts and how long it runs.' },
+  { id: 'submission', group: 'Quarterly planning', label: 'Project submission', path: '/planning/submit', step: '7.6', description: 'Product managers submit projects for the quarter, each with its ROI, description and quarterly goal.' },
+  { id: 'prioritisation', group: 'Quarterly planning', label: 'Prioritisation', path: '/planning/prioritise', step: '7.6', description: 'Directors, the CEO and the CTO rank submitted projects by drag and drop, or with Rank by comparing: two projects side by side, pick one, repeat.' },
   { id: 'manufacturing', label: 'Unit cost builder', path: '/manufacturing', step: '7.7', description: 'Itemise per-unit components to replace the gross margin estimate with real COGS.' },
+  { id: 'resourcing', group: 'Project management', label: 'Costs & resourcing', path: '/resourcing', step: '7.4', description: 'Itemise costs, assign people to projects, and turn capacity gaps into proposed hires.' },
+  { id: 'capacity', group: 'Project management', label: 'Capacity', path: '/capacity', step: '7.4', description: 'Utilisation by department and person across all projects.' },
+  { id: 'sales', label: 'Sales pipeline', path: '/sales', step: '7.5', description: 'Projects from Proposed onwards as a pipeline board, with revenue planning, recurring revenue and warranty.' },
   { id: 'assumptions', label: 'Assumptions', path: '/assumptions', step: '7.8', description: 'Fiscal year, department rates and capacity, and default revenue settings.' },
   { id: 'admin', label: 'Admin', path: '/admin', step: '7.8', description: 'Users, role visibility and mocked integrations.' },
-  { id: 'inbox', label: 'Inbox', path: '/inbox', step: '7.8', description: 'Mentions, replies and pending approvals.' },
 ];
 
 export type Access = 'edit' | 'view';
 
+const LEADERS_VIEW = { Leadership: 'view', CTO: 'view', Finance: 'view' } as const;
+
 /** The role visibility matrix: which sections each role can see or edit. Missing = hidden. */
 export const ACCESS: Record<SectionId, Partial<Record<Role, Access>>> = {
-  portfolio: { Leadership: 'view', CTO: 'view', Finance: 'view', 'Product Manager': 'edit', 'Project Manager': 'view' },
-  roi: { Leadership: 'view', CTO: 'view', Finance: 'view', 'Product Manager': 'edit', 'Project Manager': 'view' },
-  resourcing: { Leadership: 'edit', CTO: 'edit', Finance: 'edit', 'Project Manager': 'edit' },
-  capacity: { Leadership: 'view', CTO: 'view', Finance: 'view', 'Project Manager': 'view' },
-  sales: { Leadership: 'view', CTO: 'view', Finance: 'view', Sales: 'edit' },
-  planning: { Leadership: 'edit', CTO: 'edit', Finance: 'view', 'Product Manager': 'edit' },
-  manufacturing: { Leadership: 'view', CTO: 'view', Finance: 'view', Manufacturing: 'edit' },
-  assumptions: { Leadership: 'view', CTO: 'view', Finance: 'edit', Admin: 'edit' },
-  admin: { Leadership: 'view', CTO: 'view', Finance: 'view', Admin: 'edit' },
   inbox: {
     Leadership: 'edit', CTO: 'edit', Finance: 'edit', 'Product Manager': 'edit', 'Project Manager': 'edit',
     Sales: 'edit', Manufacturing: 'edit', Admin: 'edit',
   },
+  summary: { ...LEADERS_VIEW, 'Product Manager': 'view', 'Project Manager': 'view' },
+  platform: { ...LEADERS_VIEW, 'Product Manager': 'view', 'Project Manager': 'view' },
+  project: { ...LEADERS_VIEW, 'Product Manager': 'edit', 'Project Manager': 'view' },
+  forecast: { ...LEADERS_VIEW, 'Product Manager': 'view', 'Project Manager': 'view' },
+  roadmap: { ...LEADERS_VIEW, 'Product Manager': 'view', 'Project Manager': 'view', Sales: 'view', Manufacturing: 'view' },
+  submission: { ...LEADERS_VIEW, 'Product Manager': 'edit' },
+  prioritisation: { Leadership: 'edit', CTO: 'edit', Finance: 'view', 'Product Manager': 'view' },
+  manufacturing: { ...LEADERS_VIEW, Manufacturing: 'edit' },
+  resourcing: { Leadership: 'edit', CTO: 'edit', Finance: 'edit', 'Project Manager': 'edit' },
+  capacity: { ...LEADERS_VIEW, 'Project Manager': 'view' },
+  sales: { ...LEADERS_VIEW, Sales: 'edit' },
+  assumptions: { ...LEADERS_VIEW, Finance: 'edit', Admin: 'edit' },
+  admin: { ...LEADERS_VIEW, Admin: 'edit' },
 };
 
 export function accessFor(role: Role, section: SectionId): Access | undefined {
@@ -72,7 +89,7 @@ export function canSee(role: Role, section: SectionId): boolean {
 const HOME: Partial<Record<Role, SectionId>> = { Sales: 'sales', Manufacturing: 'manufacturing', Admin: 'admin' };
 
 export function homePath(role: Role): string {
-  const home = HOME[role] ?? 'portfolio';
+  const home = HOME[role] ?? 'summary';
   return SECTIONS.find((s) => s.id === home)!.path;
 }
 

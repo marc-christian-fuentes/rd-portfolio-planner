@@ -23,7 +23,14 @@ const CARD_LIMIT = 3;
 
 export function PipelineBoard({ projects }: { projects: Project[] }) {
   const data = useApp((s) => s.data);
+  const plan = useApp((s) => s.plan);
   const roiFor = useRoiFor();
+  // The latest published plan drives this view: committed projects show their priority.
+  const published = plan.versions[plan.versions.length - 1];
+  const planRank = (id: string) => {
+    if (!published || !published.committed.includes(id)) return null;
+    return published.ranking.filter((x) => published.committed.includes(x)).indexOf(id) + 1;
+  };
   const [expanded, setExpanded] = useState<Phase[]>([]);
   const platformName = (id: string) => data.platforms.find((pl) => pl.id === id)?.name ?? '—';
 
@@ -50,7 +57,17 @@ export function PipelineBoard({ projects }: { projects: Project[] }) {
                         to={`/project/${p.id}?phase=${encodeURIComponent(phase)}`}
                         className="block rounded-lg border border-moss-200 bg-white px-3 py-2 hover:border-moss-500 focus-visible:outline-2 focus-visible:outline-moss-600"
                       >
-                        <div className="text-[13px] leading-snug font-semibold text-moss-900">{p.name}</div>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-[13px] leading-snug font-semibold text-moss-900">{p.name}</span>
+                          {planRank(p.id) && (
+                            <span
+                              className="num shrink-0 rounded-full bg-moss-800 px-1.5 py-px text-[10px] font-medium text-white"
+                              title={`Priority #${planRank(p.id)} in the published ${plan.quarter} plan`}
+                            >
+                              {plan.quarter.split(' ')[0]} #{planRank(p.id)}
+                            </span>
+                          )}
+                        </div>
                         <div className="mt-0.5 flex items-baseline justify-between gap-2 text-[12px] text-moss-500">
                           <span className="truncate">{platformName(p.platformId)}</span>
                           <span className="num shrink-0">{npv != null ? `NPV ${formatK(npv)}` : 'No ROI yet'}</span>

@@ -220,14 +220,56 @@ export interface ProposedHire {
 
 export type PlanStage = 'Propose' | 'Prioritise' | 'Resource' | 'Adjust' | 'Published';
 
-export interface QuarterlyPlan {
-  id: string;
-  quarter: string; // e.g. "FY27-Q1"
+/** Something that happened to the plan, for its history. */
+export interface PlanEvent {
+  at: ISODate;
+  by: string;
+  action: string;
+}
+
+/** A project a product manager submitted for the quarter. */
+export interface PlanEntry {
+  projectId: string;
+  /** What the project commits to this quarter. */
+  goal: string;
+  submittedBy: string;
+  submittedAt: ISODate;
+}
+
+/** A locked, published snapshot of the plan. */
+export interface PlanVersion {
   version: number;
+  at: ISODate;
+  by: string;
+  ranking: string[];
+  committed: string[];
+  note: string;
+}
+
+/** An urgent must-do project proposed after the plan was published. */
+export interface PullIn {
+  id: string;
+  projectId: string;
+  reason: string;
+  proposedBy: string;
+  at: ISODate;
+  status: 'Pending' | 'Approved' | 'Rejected';
+}
+
+/** The quarter's R&D priorities as they move through the fixed stages (spec section 7). */
+export interface QuarterlyPlan {
+  quarter: string; // e.g. "Q1 2027"
   stage: PlanStage;
-  rankedProjectIds: string[];
-  committedProjectIds: string[];
-  history: { at: ISODate; by: string; action: string }[];
+  entries: PlanEntry[];
+  /** Project ids, highest priority first. */
+  ranking: string[];
+  /** Projects the CTO committed resources to. */
+  committed: string[];
+  /** How many projects the CTO approved; Adjust may swap but not exceed it. */
+  approvedCount: number | null;
+  versions: PlanVersion[];
+  pullIns: PullIn[];
+  history: PlanEvent[];
 }
 
 export interface Comment {

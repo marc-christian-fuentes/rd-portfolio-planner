@@ -12,7 +12,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { seed, seedAllocations, seedCostLines } from './data/seed';
-import type { Allocation, CostLine, Granularity, ProposedHire, RevenuePlan, Role, RoiModel, RoiYear, SeedData } from './data/types';
+import type { Allocation, CostLine, Granularity, PlanStage, ProposedHire, QuarterlyPlan, RevenuePlan, Role, RoiModel, RoiYear, SeedData } from './data/types';
+import { PLAN_STAGES, seedPlan } from './data/planning';
 import { peopleForRole } from './data/access';
 import { MAX_YEARS, MIN_YEARS, computeRoi, createDefaultRoiModel, seedRoiModels } from './data/roi';
 import { currentStep, hireCostsForModel, nextStatus } from './data/resourcing';
@@ -20,6 +21,8 @@ import { applyRevenuePlan, convertGranularity, createRevenuePlan, enteredForYear
 import type { RoiLookup } from './data/rollup';
 
 const seededModels = seedRoiModels(seed.projects);
+const goalOf = (projectId: string) => seed.projects.find((p) => p.id === projectId)?.quarterlyGoal ?? '';
+const projectName = (projectId: string) => seed.projects.find((p) => p.id === projectId)?.name ?? projectId;
 
 const today = () => new Date().toISOString().slice(0, 10);
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}`;
@@ -38,6 +41,8 @@ interface AppState {
   includePendingHires: boolean;
   /** Sales' revenue plan per project id. */
   revenuePlans: Record<string, RevenuePlan>;
+  /** This quarter's R&D plan. */
+  plan: QuarterlyPlan;
 
   setRole: (role: Role) => void;
   setActingAs: (personId: string) => void;
@@ -58,6 +63,16 @@ interface AppState {
   updateRevenuePlan: (projectId: string, patch: Partial<Omit<RevenuePlan, 'projectId' | 'unitsByPeriod' | 'granularity'>>) => void;
   setPlanUnits: (projectId: string, periodKey: string, value: number) => void;
   setPlanGranularity: (projectId: string, granularity: Granularity, years: number[]) => void;
+
+  submitToPlan: (projectId: string, goal: string) => void;
+  withdrawFromPlan: (projectId: string) => void;
+  updatePlanGoal: (projectId: string, goal: string) => void;
+  advancePlanStage: () => void;
+  setPlanRanking: (ranking: string[], how: string) => void;
+  setCommitted: (projectId: string, committed: boolean) => void;
+  proposePullIn: (projectId: string, reason: string) => void;
+  decidePullIn: (pullInId: string, approve: boolean) => void;
+  restartPlan: () => void;
 }
 
 export const useApp = create<AppState>()(
@@ -70,6 +85,14 @@ export const useApp = create<AppState>()(
         set({ roiModels: { ...get().roiModels, [projectId]: { ...change(current), updatedAt: today() } } });
       };
 
+      /** Apply a change to the quarterly plan and log it, unless nothing changed. */
+      const changePlan = (action: string, change: (p: QuarterlyPlan) => QuarterlyPlan) => {
+        const before = get().plan;
+        const after = change(before);
+        if (after === before) return;
+        set({ plan: { ...after, history: [...after.history, { at: today(), by: get().actingAsId, action }] } });
+      };
+
       return {
         data: seed,
         role: 'Leadership',
@@ -80,6 +103,7 @@ export const useApp = create<AppState>()(
         hires: seed.hires,
         includePendingHires: true,
         revenuePlans: seedRevenuePlans(seed.projects, seededModels),
+        plan: seedPlan(goalOf),
 
         setRole: (role) => set({ role, actingAsId: peopleForRole(get().data, role)[0]?.id ?? '' }),
         setActingAs: (actingAsId) => set({ actingAsId }),
@@ -161,6 +185,91 @@ export const useApp = create<AppState>()(
             },
           });
         },
+        // ---------- Quarterly plan: every change is logged in its history ----------
+
+        submitToPlan: (projectId, goal) =>
+          changePlan(`Submitted ${projectName(projectId)}`, (p) =>
+            p.stage !== 'Propose' || p.entries.some((e) => e.projectId === projectId)
+              ? p
+              : {
+                  ...p,
+                  entries: [...p.entries, { projectId, goal, submittedBy: get().actingAsId, submittedAt: today() }],
+                  ranking: [...p.ranking, projectId],
+                },
+          ),
+        withdrawFromPlan: (projectId) =>
+          changePlan(`Withdrew ${projectName(projectId)}`, (p) =>
+            p.stage !== 'Propose'
+              ? p
+              : { ...p, entries: p.entries.filter((e) => e.projectId !== projectId), ranking: p.ranking.filter((id) => id !== projectId) },
+          ),
+        updatePlanGoal: (projectId, goal) =>
+          set({ plan: { ...get().plan, entries: get().plan.entries.map((e) => (e.projectId === projectId ? { ...e, goal } : e)) } }),
+        advancePlanStage: () => {
+          const p = get().plan;
+          const i = PLAN_STAGES.indexOf(p.stage);
+          if (i === -1 || p.stage === 'Published') return;
+          const next: PlanStage = PLAN_STAGES[i + 1];
+          if (next === 'Published') {
+            const version = p.versions.length + 1;
+            changePlan(`Published version ${version}`, (q) => ({
+              ...q,
+              stage: next,
+              versions: [...q.versions, { version, at: today(), by: get().actingAsId, ranking: q.ranking, committed: q.committed, note: 'Published' }],
+            }));
+          } else if (next === 'Adjust') {
+            changePlan(`CTO committed ${p.committed.length} of ${p.ranking.length} projects; sent to Director and CEO`, (q) => ({
+              ...q,
+              stage: next,
+              approvedCount: q.committed.length,
+            }));
+          } else {
+            changePlan(`Moved to ${next}`, (q) => ({ ...q, stage: next }));
+          }
+        },
+        setPlanRanking: (ranking, how) => changePlan(how, (p) => ({ ...p, ranking })),
+        setCommitted: (projectId, committed) => {
+          const p = get().plan;
+          if (committed && p.stage === 'Adjust' && p.approvedCount !== null && p.committed.length >= p.approvedCount) return;
+          changePlan(`${committed ? 'Committed' : 'Uncommitted'} ${projectName(projectId)}`, (q) => ({
+            ...q,
+            committed: committed ? [...q.committed.filter((id) => id !== projectId), projectId] : q.committed.filter((id) => id !== projectId),
+          }));
+        },
+        proposePullIn: (projectId, reason) =>
+          changePlan(`Proposed mid-quarter pull-in: ${projectName(projectId)}`, (p) => ({
+            ...p,
+            pullIns: [...p.pullIns, { id: newId('pull'), projectId, reason, proposedBy: get().actingAsId, at: today(), status: 'Pending' }],
+          })),
+        decidePullIn: (pullInId, approve) => {
+          const pull = get().plan.pullIns.find((x) => x.id === pullInId);
+          if (!pull || pull.status !== 'Pending') return;
+          changePlan(`${approve ? 'Approved' : 'Rejected'} pull-in: ${projectName(pull.projectId)}`, (p) => {
+            const pullIns = p.pullIns.map((x) => (x.id === pullInId ? { ...x, status: approve ? ('Approved' as const) : ('Rejected' as const) } : x));
+            if (!approve) return { ...p, pullIns };
+            // Urgent must-do: goes to the top of the ranking and into the committed set, as a new version.
+            const ranking = [pull.projectId, ...p.ranking.filter((id) => id !== pull.projectId)];
+            const committed = [...p.committed.filter((id) => id !== pull.projectId), pull.projectId];
+            const entries = p.entries.some((e) => e.projectId === pull.projectId)
+              ? p.entries
+              : [...p.entries, { projectId: pull.projectId, goal: goalOf(pull.projectId), submittedBy: pull.proposedBy, submittedAt: pull.at }];
+            const version = p.versions.length + 1;
+            return {
+              ...p,
+              pullIns,
+              ranking,
+              committed,
+              entries,
+              approvedCount: committed.length,
+              versions: [
+                ...p.versions,
+                { version, at: today(), by: get().actingAsId, ranking, committed, note: `Mid-quarter pull-in: ${projectName(pull.projectId)}` },
+              ],
+            };
+          });
+        },
+        restartPlan: () => set({ plan: seedPlan(goalOf) }),
+
         setPlanGranularity: (projectId, granularity, years) => {
           const plan = get().revenuePlans[projectId];
           if (!plan || plan.granularity === granularity) return;
@@ -175,9 +284,10 @@ export const useApp = create<AppState>()(
     },
     {
       name: 'rdpp-session',
-      version: 5,
+      version: 6,
       partialize: (s) => ({
         revenuePlans: s.revenuePlans,
+        plan: s.plan,
         role: s.role,
         actingAsId: s.actingAsId,
         roiModels: s.roiModels,
@@ -199,6 +309,8 @@ export const useApp = create<AppState>()(
           includePendingHires: s.includePendingHires ?? true,
           // Version 5 added sales revenue plans.
           revenuePlans: s.revenuePlans ?? seedRevenuePlans(seed.projects, seededModels),
+          // Version 6 added the quarterly plan (older saves had a different shape).
+          plan: version < 6 || !s.plan ? seedPlan(goalOf) : s.plan,
         } as AppState;
       },
     },

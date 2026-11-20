@@ -22,7 +22,10 @@
   - Costs & resourcing: allocate people to projects, see staffing gaps, propose hires (Director → CTO → Finance approval), plan non-labour costs.
   - Capacity: utilisation by department and person.
 - **Sales pipeline**: projects from Proposed onwards as a progress board; revenue plans by month, quarter or year with price overrides, and recurring subscriptions or warranty linked to hardware (attach and retention). Plans feed units and price into each project's ROI model.
-- **Quarterly planning, Unit cost builder**: coming in later steps.
+- **Quarterly planning**: Propose → Prioritise → Resource → Adjust → Publish, with every change in the plan's history.
+  - Project submission: product managers submit projects with their quarterly goal.
+  - Prioritisation: drag and drop, or **Rank by comparing** (pick between two projects; a binary insertion sort builds the ranking from your choices); the CTO commits resources; the Director and CEO swap within the approved count; publish locks a version; mid-quarter pull-ins create new versions.
+- **Unit cost builder**: coming in a later step.
 
 ## Where things live
 
@@ -41,7 +44,7 @@
 - [x] 3. Portfolio views, ROI calculator, forecast and roadmap
 - [x] 4. Costs, resourcing and proposed hires
 - [x] 5. Sales revenue (recurring and warranty)
-- [ ] 6. Quarterly planning (Rank by comparing)
+- [x] 6. Quarterly planning (Rank by comparing)
 - [ ] 7. Manufacturing unit cost builder
 - [ ] 8. Assumptions, admin, comments and inbox
 - [ ] 9. Excel export and Reset demo

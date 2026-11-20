@@ -15,6 +15,8 @@ import RoadmapPage from './pages/RoadmapPage';
 import ResourcingPage from './pages/ResourcingPage';
 import CapacityPage from './pages/CapacityPage';
 import SalesPage from './pages/SalesPage';
+import SubmissionPage from './pages/SubmissionPage';
+import PrioritisationPage from './pages/PrioritisationPage';
 import AdminPage from './pages/AdminPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import { canSee, homePath, type SectionId } from './data/access';
@@ -48,8 +50,8 @@ export default function App() {
 
           {/* Quarterly planning */}
           <Route path="/planning" element={<Navigate to="/planning/submit" replace />} />
-          <Route path="/planning/submit" element={placeholder('submission')} />
-          <Route path="/planning/prioritise" element={placeholder('prioritisation')} />
+          <Route path="/planning/submit" element={page('submission', <SubmissionPage />)} />
+          <Route path="/planning/prioritise" element={page('prioritisation', <PrioritisationPage />)} />
 
           <Route path="/manufacturing" element={placeholder('manufacturing')} />
 

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { downloadRoiWorkbook } from '../data/excel';
 import type { Project } from '../data/types';
-import { effectiveModel, useApp } from '../store';
+import { effectiveModel, rateIndexFor, useApp } from '../store';
 
 /** Runs the export with the current app state. */
 function useExport() {
@@ -16,7 +16,8 @@ function useExport() {
     setBusy(true);
     setMessage('');
     try {
-      const count = await downloadRoiWorkbook(ids, useApp.getState(), effectiveModel);
+      const state = useApp.getState();
+      const count = await downloadRoiWorkbook(ids, { ...state, rateIndex: (id) => rateIndexFor(state, id) }, effectiveModel);
       setMessage(count ? `Downloaded ${count} project${count === 1 ? '' : 's'}.` : 'Nothing to export: none of these projects has an ROI model.');
     } catch {
       setMessage('The export didn’t work. Please try again.');

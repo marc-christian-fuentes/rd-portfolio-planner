@@ -8,7 +8,7 @@
  * The plan feeds the project's ROI model. Sales sees revenue only, no costs.
  */
 import { useState } from 'react';
-import { accessFor, visibleProjects } from '../data/access';
+import { accessFor, visibleProjects, yearLabel } from '../data/access';
 import { formatMoney } from '../data/model';
 import {
   canPlanRevenue,
@@ -16,7 +16,9 @@ import {
   periodKeys,
   periodLabel,
   priceOf,
+  quarterMonths,
   revenueByYear,
+  standaloneFromLinked,
   type RevenueYear,
 } from '../data/revenue';
 import { formatK } from '../data/roi';
@@ -235,7 +237,7 @@ function Segmented<T extends string>({
 }
 
 function PlanEditor({ project, plan, canEdit }: { project: Project; plan: RevenuePlan; canEdit: boolean }) {
-  const { data, role, unitCosts, updateRevenuePlan, setPlanUnits, setPlanGranularity } = useApp();
+  const { data, role, unitCosts, assumptions, updateRevenuePlan, setPlanUnits, setPlanGranularity } = useApp();
   const planYears = usePlanYears();
   const hardwareUnits = useHardwareUnits();
   const years = planYears(project);
@@ -261,7 +263,7 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
       <KpiStrip
         items={[
           { label: 'Planned revenue', value: formatK(totalRevenue) },
-          { label: `Peak year (${peak.year})`, value: formatK(peak.revenue) },
+          { label: `Peak year (${yearLabel(peak.year, assumptions.periodView)})`, value: formatK(peak.revenue) },
           { label: plan.priceOverride != null ? 'Price (Sales override)' : 'Price (project default)', value: formatMoney(price) },
           showCosts
             ? { label: 'COGS method', value: unitCost !== null ? `Itemised $${unitCost.toFixed(2)}` : `Margin ${margin}%` }
@@ -303,12 +305,16 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
                   label="Recurring mode"
                   disabled={!canEdit}
                   value={plan.recurringMode}
-                  onChange={(v) =>
+                  onChange={(v) => {
+                    // Going standalone: carry on from the subscribers the linked plan
+                    // produced, unless subscriber numbers were already typed in.
+                    const nothingEntered = years.every((y) => enteredForYear(plan, y) === 0);
                     updateRevenuePlan(project.id, {
                       recurringMode: v,
                       linkedHardwareProjectId: v === 'linked-to-hardware' ? (plan.linkedHardwareProjectId ?? hardwareOptions[0]?.id ?? null) : plan.linkedHardwareProjectId,
-                    })
-                  }
+                      ...(v === 'standalone' && linked && nothingEntered ? { unitsByPeriod: standaloneFromLinked(plan, project, years, hw) } : {}),
+                    });
+                  }}
                   options={[
                     { value: 'linked-to-hardware', label: 'Linked to hardware' },
                     { value: 'standalone', label: 'Standalone' },
@@ -393,7 +399,7 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
                       onClick={() => setEntryYear(y)}
                       className={`num rounded-full px-2 py-0.5 text-[12px] ${y === entryYear ? 'bg-moss-800 text-white' : 'text-moss-600 hover:bg-moss-100'}`}
                     >
-                      {y}
+                      {yearLabel(y, assumptions.periodView)}
                     </button>
                   ))}
                 </div>
@@ -403,7 +409,13 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
             <div className="grid grid-cols-3 gap-3 px-4 py-3 sm:grid-cols-6">
               {(plan.granularity === 'annual' ? years.flatMap((y) => periodKeys(y, 'annual')) : periodKeys(entryYear, plan.granularity)).map((key) => (
                 <label key={key} className="flex flex-col gap-1 text-[12px] text-moss-500">
-                  <span className="num">{plan.granularity === 'annual' ? key : periodLabel(key)}</span>
+                  <span className="num" title={plan.granularity === 'quarterly' ? quarterMonths(Number(key.slice(-1)), assumptions.fiscalStartMonth) : undefined}>
+                    {plan.granularity === 'annual'
+                      ? yearLabel(Number(key), assumptions.periodView)
+                      : plan.granularity === 'quarterly'
+                        ? `${periodLabel(key)} · ${quarterMonths(Number(key.slice(-1)), assumptions.fiscalStartMonth)}`
+                        : periodLabel(key, assumptions.fiscalStartMonth)}
+                  </span>
                   {canEdit ? (
                     <NumberInput ariaLabel={`Units ${key}`} value={plan.unitsByPeriod[key] ?? 0} min={0} className="w-full" onChange={(v) => setPlanUnits(project.id, key, v)} />
                   ) : (

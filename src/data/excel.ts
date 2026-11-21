@@ -28,6 +28,8 @@ export interface ExportState {
   hires: ProposedHire[];
   includePendingHires: boolean;
   assumptions: Assumptions;
+  /** How far department rates have moved for a project (1 = unchanged). */
+  rateIndex?: (projectId: string) => number;
 }
 
 type EffectiveModel = (state: ExportState, projectId: string) => RoiModel | undefined;
@@ -194,9 +196,11 @@ function projectSheet(ws: Worksheet, project: Project, model: RoiModel, result: 
   input(R.savings, model.years.map((y) => y.savings), MONEY);
   total(R.savings, sum(model.years.map((y) => y.savings)), MONEY);
 
-  label(R.rd, 'R&D cost');
-  input(R.rd, model.years.map((y) => y.rdCost), MONEY);
-  total(R.rd, sum(model.years.map((y) => y.rdCost)), MONEY);
+  // R&D at today's department rates (the same figure the app uses).
+  const rd = rows.map((r) => Math.round(r.rdCost * 10) / 10);
+  label(R.rd, rows.some((r) => Math.abs(r.rdRateChange) >= 0.05) ? 'R&D cost (at current department rates)' : 'R&D cost');
+  input(R.rd, rd, MONEY);
+  total(R.rd, sum(rd), MONEY);
 
   label(R.hires, 'New hires (from resourcing)');
   input(R.hires, rows.map((r) => Math.round(r.hireCost * 10) / 10), MONEY);
@@ -277,7 +281,7 @@ export function buildRoiWorkbook(wb: Workbook, projectIds: string[], s: ExportSt
     const project = s.data.projects.find((p) => p.id === id);
     const model = effectiveModel(s, id);
     if (!project || !model) continue;
-    const result = computeRoi(model, hireCostsForModel(project, model, s.hires, s.data.departments, s.includePendingHires));
+    const result = computeRoi(model, hireCostsForModel(project, model, s.hires, s.data.departments, s.includePendingHires), s.rateIndex?.(id) ?? 1);
     const name = sheetName(project.name, used);
     const totalCol = projectSheet(wb.addWorksheet(name), project, model, result, s);
     refs.push({ project, sheet: name, totalCol, result });

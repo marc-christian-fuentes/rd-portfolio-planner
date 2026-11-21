@@ -29,11 +29,25 @@ export function periodKeys(year: number, g: Granularity): string[] {
   return (g === 'quarterly' ? QUARTERS : MONTHS).map((p) => `${year}-${p}`);
 }
 
-export function periodLabel(key: string): string {
+const monthName = (calendarMonth: number) => new Date(2000, calendarMonth - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+
+/**
+ * Model years are fiscal years. Month "2027-01" is the first month of
+ * FY27, so with an October year start it is labelled "Oct", and Q1 covers
+ * Oct–Dec. With a January start, the labels are ordinary calendar months.
+ */
+export function periodLabel(key: string, fiscalStartMonth = 1): string {
   const part = key.slice(5);
   if (!part) return key;
   if (part.startsWith('Q')) return part;
-  return new Date(2000, Number(part) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+  return monthName(((fiscalStartMonth - 1 + Number(part) - 1) % 12) + 1);
+}
+
+/** The months a fiscal quarter covers, e.g. "Oct–Dec" for Q1 with an October start. */
+export function quarterMonths(quarter: number, fiscalStartMonth = 1): string {
+  const first = ((fiscalStartMonth - 1 + (quarter - 1) * 3) % 12) + 1;
+  const last = ((first - 1 + 2) % 12) + 1;
+  return `${monthName(first)}–${monthName(last)}`;
 }
 
 /**
@@ -46,21 +60,56 @@ export function enteredForYear(plan: RevenuePlan, year: number): number {
   return plan.recurringMode === 'standalone' ? sum / values.length : sum;
 }
 
-/** Re-cuts entered numbers when switching between monthly, quarterly and yearly. */
+/** Splits a whole number into n parts that add back up exactly. */
+function splitEvenly(total: number, n: number): number[] {
+  const whole = Math.round(total);
+  const each = Math.floor(whole / n);
+  return Array.from({ length: n }, (_, i) => (i === n - 1 ? whole - each * (n - 1) : each));
+}
+
+/**
+ * Re-cuts entered numbers when switching between monthly, quarterly and
+ * yearly. It works period by period, so the shape survives a round trip:
+ * quarters split into their own three months, and months add back up into
+ * their own quarter (not the year's average).
+ */
 export function convertGranularity(plan: RevenuePlan, to: Granularity, years: number[]): Record<string, number> {
+  const from = plan.granularity;
+  const level = plan.recurringMode === 'standalone'; // subscribers: a level, so average/copy instead of sum/split
+  const get = (k: string) => plan.unitsByPeriod[k] ?? 0;
   const out: Record<string, number> = {};
+  const size: Record<Granularity, number> = { annual: 1, quarterly: 4, monthly: 12 };
+
   for (const y of years) {
-    const yearly = enteredForYear(plan, y);
+    const src = periodKeys(y, from).map(get);
     const keys = periodKeys(y, to);
-    if (plan.recurringMode === 'standalone') {
-      // Subscribers are a level, not a flow: every period keeps the same count.
-      keys.forEach((k) => (out[k] = Math.round(yearly)));
+    if (from === to) {
+      keys.forEach((k, i) => (out[k] = src[i]));
+    } else if (size[to] < size[from]) {
+      // Coarser: each target period gathers its own block of source periods.
+      const block = size[from] / size[to];
+      keys.forEach((k, i) => {
+        const part = src.slice(i * block, (i + 1) * block);
+        const sum = part.reduce((s, v) => s + v, 0);
+        out[k] = level ? Math.round(sum / block) : sum;
+      });
     } else {
-      // Units are a flow: split the year's total evenly, remainder in the last period.
-      const each = Math.floor(yearly / keys.length);
-      keys.forEach((k, i) => (out[k] = i === keys.length - 1 ? Math.round(yearly - each * (keys.length - 1)) : each));
+      // Finer: each source period is split across its own child periods.
+      const block = size[to] / size[from];
+      src.forEach((v, i) => {
+        const parts = level ? Array(block).fill(Math.round(v)) : splitEvenly(v, block);
+        parts.forEach((p: number, j: number) => (out[keys[i * block + j]] = p));
+      });
     }
   }
+  return out;
+}
+
+/** Standalone entries that continue a linked plan: each year's active subscribers. */
+export function standaloneFromLinked(plan: RevenuePlan, project: Project, years: number[], hardwareUnits: number[]): Record<string, number> {
+  const rows = revenueByYear({ ...plan, recurringMode: 'linked-to-hardware' }, project, years, hardwareUnits);
+  const out: Record<string, number> = {};
+  years.forEach((y, i) => periodKeys(y, plan.granularity).forEach((k) => (out[k] = Math.round(rows[i].billedUnits))));
   return out;
 }
 

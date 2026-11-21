@@ -482,6 +482,8 @@ export const seed: SeedData = { platforms, departments, people, projects, hires,
 export const seedAssumptions: Assumptions = {
   fiscalStartMonth: 1,
   periodView: 'calendar',
+  waccPct: 10,
+  convention: 'mid-year',
   defaultGrossMarginPct: 40,
   defaultWarrantyPrice: 35,
   defaultAttachRatePct: 72,

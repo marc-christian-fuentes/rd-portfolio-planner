@@ -5,27 +5,30 @@
  * description and quarterly goal. Everyone else sees what's been submitted.
  */
 import { useState } from 'react';
-import { visibleProjects } from '../data/access';
+import { peopleForRole, visibleProjects } from '../data/access';
 import { personName } from '../data/model';
 import { SUBMITTABLE_PHASES } from '../data/planning';
 import { formatK } from '../data/roi';
 import type { Project } from '../data/types';
 import { useApp, useRoiFor } from '../store';
 import { PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
+import { useQuarterName } from '../components/YearLabel';
 import { PlanStatus } from '../components/PlanStatus';
 
 export default function SubmissionPage() {
   const { data, role, actingAsId, plan } = useApp();
+  const qn = useQuarterName();
   const roiFor = useRoiFor();
   const isPm = role === 'Product Manager';
   const mine = visibleProjects(data, role, actingAsId).filter((p) => SUBMITTABLE_PHASES.includes(p.phase));
   const visibleIds = new Set(visibleProjects(data, role, actingAsId).map((p) => p.id));
   const entries = plan.entries.filter((e) => visibleIds.has(e.projectId));
+  const hidden = plan.entries.length - entries.length;
 
   return (
     <>
       <PageHeader
-        title={`Project submission · ${plan.quarter}`}
+        title={`Project submission · ${qn(plan.quarter)}`}
         subtitle="Product managers submit projects for the quarter, each with its ROI, description and quarterly goal."
       />
       <PlanStatus />
@@ -34,7 +37,7 @@ export default function SubmissionPage() {
         <section className="mb-6">
           <h2 className="mb-2 text-[15px] font-semibold text-moss-900">Your projects</h2>
           {mine.length === 0 ? (
-            <p className="text-[13px] text-moss-500">None of your projects can be submitted this quarter.</p>
+            <NothingToSubmit />
           ) : (
             <div className="grid gap-3 lg:grid-cols-2">
               {mine.map((p) => (
@@ -45,7 +48,14 @@ export default function SubmissionPage() {
         </section>
       )}
 
-      <Panel title={`Submitted for ${plan.quarter}`} aside={<span className="num text-[12px] text-moss-500">{entries.length} projects</span>}>
+      <Panel
+        title={`Submitted for ${qn(plan.quarter)}`}
+        aside={
+          <span className="num text-[12px] text-moss-500">
+            {hidden > 0 ? `${entries.length} of ${plan.entries.length} projects` : `${entries.length} projects`}
+          </span>
+        }
+      >
         <div className="overflow-x-auto">
           <table className={table}>
             <thead>
@@ -81,21 +91,61 @@ export default function SubmissionPage() {
               {entries.length === 0 && (
                 <tr>
                   <td colSpan={6} className={`${td} text-moss-500`}>
-                    Nothing submitted yet.
+                    {hidden > 0 ? 'None of your visible projects are submitted yet.' : 'Nothing submitted yet.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        {hidden > 0 && (
+          <p className="border-t border-moss-200 px-4 py-2.5 text-[12px] text-moss-500">
+            {hidden} more {hidden === 1 ? 'project was' : 'projects were'} submitted by other product managers. You only see the projects Admin has
+            shared with you.
+          </p>
+        )}
       </Panel>
     </>
+  );
+}
+
+/**
+ * Shown when this product manager has nothing in a submittable phase (e.g.
+ * every project is completed): says why, and offers the managers who do.
+ */
+function NothingToSubmit() {
+  const { data, setActingAs } = useApp();
+  const others = peopleForRole(data, 'Product Manager').filter((person) =>
+    visibleProjects(data, 'Product Manager', person.id).some((p) => SUBMITTABLE_PHASES.includes(p.phase)),
+  );
+  return (
+    <div className="rounded-[10px] border border-dashed border-moss-300 bg-white px-4 py-3 text-[13px] text-moss-700">
+      <p>
+        None of your projects can be submitted this quarter. Only projects that are {SUBMITTABLE_PHASES.join(', ').replace(/, ([^,]*)$/, ' or $1')} take part
+        in quarterly planning, and yours are all completed.
+      </p>
+      {others.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-moss-600">Try it as:</span>
+          {others.map((person) => (
+            <button
+              key={person.id}
+              onClick={() => setActingAs(person.id)}
+              className="rounded-md border border-moss-300 bg-white px-2.5 py-1 text-[12px] font-medium text-moss-800 hover:bg-moss-50"
+            >
+              {person.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 /** One of the product manager's projects: its numbers, its goal, and Submit / Withdraw. */
 function SubmissionCard({ project }: { project: Project }) {
   const { plan, submitToPlan, withdrawFromPlan, updatePlanGoal } = useApp();
+  const qn = useQuarterName();
   const r = useRoiFor()(project.id);
   const entry = plan.entries.find((e) => e.projectId === project.id);
   const [draft, setDraft] = useState(project.quarterlyGoal);
@@ -126,7 +176,7 @@ function SubmissionCard({ project }: { project: Project }) {
       </label>
       <div className="mt-3">
         {!open ? (
-          <span className="text-[12px] text-moss-500">Submissions are closed for {plan.quarter}.</span>
+          <span className="text-[12px] text-moss-500">Submissions are closed for {qn(plan.quarter)}.</span>
         ) : entry ? (
           <button onClick={() => withdrawFromPlan(project.id)} className="rounded-md border border-moss-300 px-3 py-1 text-[13px] text-moss-700 hover:border-rust hover:text-rust">
             Withdraw
@@ -137,7 +187,7 @@ function SubmissionCard({ project }: { project: Project }) {
             onClick={() => submitToPlan(project.id, goal.trim())}
             className="rounded-md bg-moss-800 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-moss-700 disabled:opacity-40"
           >
-            Submit for {plan.quarter}
+            Submit for {qn(plan.quarter)}
           </button>
         )}
       </div>

@@ -20,7 +20,7 @@ import { applyUnitCost, seedUnitCosts, unitCostOf } from './data/unitcost';
 import type { CostCategory, UnitCostItem } from './data/types';
 import { peopleForRole } from './data/access';
 import { MAX_YEARS, MIN_YEARS, computeRoi, createDefaultRoiModel, seedRoiModels } from './data/roi';
-import { currentStep, hireCostsForModel, nextStatus } from './data/resourcing';
+import { currentStep, hireCostsForModel, nextStatus, rdRateIndex } from './data/resourcing';
 import { applyRevenuePlan, convertGranularity, createRevenuePlan, enteredForYear, seedRevenuePlans } from './data/revenue';
 import type { RoiLookup } from './data/rollup';
 import { inboxFor } from './data/inbox';
@@ -183,7 +183,14 @@ export const useApp = create<AppState>()(
           set(initialState());
         },
 
-        setRole: (role) => set({ role, actingAsId: peopleForRole(get().data, role)[0]?.id ?? '' }),
+        setRole: (role) => {
+          // Act as the first person in that role who still has live (not completed) work,
+          // so a visitor doesn't land on someone with nothing to do.
+          const data = get().data;
+          const people = peopleForRole(data, role);
+          const busy = people.find((p) => data.projects.some((pr) => pr.ownerId === p.id && pr.phase !== 'Completed'));
+          set({ role, actingAsId: (busy ?? people[0])?.id ?? '' });
+        },
         setActingAs: (actingAsId) => set({ actingAsId }),
 
         createRoiModel: (projectId) => {
@@ -388,7 +395,16 @@ export const useApp = create<AppState>()(
 
         // ---------- Assumptions ----------
 
-        setAssumptions: (patch) => set({ assumptions: { ...get().assumptions, ...patch } }),
+        setAssumptions: (patch) => {
+          // Portfolio WACC and discounting apply to every project's model at once.
+          const modelPatch: Partial<RoiModel> = {};
+          if (patch.waccPct !== undefined) modelPatch.waccPct = patch.waccPct;
+          if (patch.convention !== undefined) modelPatch.convention = patch.convention;
+          const roiModels = Object.keys(modelPatch).length
+            ? Object.fromEntries(Object.entries(get().roiModels).map(([id, m]) => [id, { ...m, ...modelPatch }]))
+            : get().roiModels;
+          set({ assumptions: { ...get().assumptions, ...patch }, roiModels });
+        },
         updateDepartment: (id, patch) =>
           set({ data: { ...get().data, departments: get().data.departments.map((d) => (d.id === id ? { ...d, ...patch } : d)) } }),
         addDepartment: () =>
@@ -560,6 +576,8 @@ export const useApp = create<AppState>()(
         const merged: AppState = {
           ...current,
           ...rest,
+          // Older saves lack newer settings (e.g. portfolio WACC): fill them from the defaults.
+          assumptions: { ...current.assumptions, ...(rest.assumptions ?? {}) },
           data: {
             ...current.data,
             projects: projects ?? current.data.projects,
@@ -639,11 +657,17 @@ export function useRoiFor(): RoiLookup {
   const revenuePlans = useApp((s) => s.revenuePlans);
   const unitCosts = useApp((s) => s.unitCosts);
   const hires = useApp((s) => s.hires);
+  const allocations = useApp((s) => s.allocations);
   const includePending = useApp((s) => s.includePendingHires);
   return (projectId) => {
     const model = effectiveModel({ data, roiModels, revenuePlans, unitCosts }, projectId);
     const project = data.projects.find((p) => p.id === projectId);
     if (!model || !project) return null;
-    return computeRoi(model, hireCostsForModel(project, model, hires, data.departments, includePending));
+    return computeRoi(model, hireCostsForModel(project, model, hires, data.departments, includePending), rateIndexFor({ data, allocations }, projectId));
   };
+}
+
+/** How far department rates have moved for a project since the demo's starting rates (1 = unchanged). */
+export function rateIndexFor(state: Pick<AppState, 'data' | 'allocations'>, projectId: string): number {
+  return rdRateIndex(projectId, state.allocations, state.data.people, state.data.departments, seed.departments);
 }

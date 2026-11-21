@@ -83,6 +83,33 @@ export function yearLabel(year: number, view: 'fiscal' | 'calendar'): string {
   return view === 'fiscal' ? `FY${String(year).slice(2)}` : String(year);
 }
 
+/**
+ * The fiscal year a calendar month falls in. Fiscal years are named by the
+ * year they end in: with an October start, Oct 2026 – Sep 2027 is FY27.
+ */
+export function fiscalYearOf(year: number, month: number, startMonth: number): number {
+  return startMonth === 1 || month < startMonth ? year : year + 1;
+}
+
+/** 1 Jan (calendar) or the fiscal start date of a model year, as a UTC timestamp. */
+export function yearStart(year: number, view: 'fiscal' | 'calendar', startMonth: number): number {
+  return view === 'fiscal' && startMonth !== 1 ? Date.UTC(year - 1, startMonth - 1, 1) : Date.UTC(year, 0, 1);
+}
+
+/**
+ * A planning quarter such as "Q1 2027" (a calendar quarter) as people should
+ * see it: unchanged in calendar view, or its fiscal name in fiscal view, e.g.
+ * "FY27 Q2" when the fiscal year starts in October.
+ */
+export function quarterName(calendarQuarter: string, view: 'fiscal' | 'calendar', startMonth: number): string {
+  const m = calendarQuarter.match(/^Q([1-4]) (\d{4})$/);
+  if (!m || view === 'calendar') return calendarQuarter;
+  const firstMonth = (Number(m[1]) - 1) * 3 + 1;
+  const fy = fiscalYearOf(Number(m[2]), firstMonth, startMonth);
+  const fq = Math.floor(((firstMonth - startMonth + 12) % 12) / 3) + 1;
+  return `${yearLabel(fy, 'fiscal')} Q${fq}`;
+}
+
 /** The months a fiscal year covers, e.g. FY27 starting October → "Oct 2026 – Sep 2027". */
 export function fiscalRange(year: number, startMonth: number): string {
   const start = new Date(startMonth === 1 ? year : year - 1, startMonth - 1, 1);

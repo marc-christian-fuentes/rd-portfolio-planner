@@ -6,17 +6,18 @@
  * Bars are placed by percentage, so the timeline always fits the screen.
  */
 import { Link } from 'react-router-dom';
-import { visibleProjects } from '../data/access';
+import { fiscalYearOf, visibleProjects, yearStart } from '../data/access';
 import { durationMonths, formatDate } from '../data/model';
 import { PHASES } from '../data/types';
 import { useApp } from '../store';
 import { PageHeader, PHASE_COLOR } from '../components/ui';
 import { PmFilter, byPm, usePmFilter } from '../components/Filters';
+import { YearLabel } from '../components/YearLabel';
 
 const time = (iso: string) => Date.parse(`${iso}T00:00:00Z`);
 
 export default function RoadmapPage() {
-  const { data, role, actingAsId } = useApp();
+  const { data, role, actingAsId, assumptions } = useApp();
   const [pm] = usePmFilter();
   const projects = byPm(visibleProjects(data, role, actingAsId), pm);
 
@@ -31,11 +32,14 @@ export default function RoadmapPage() {
     );
   }
 
-  // Timeline runs from 1 Jan of the first start year to 31 Dec of the last end year.
-  const firstYear = Math.min(...projects.map((p) => Number(p.startDate.slice(0, 4))));
-  const lastYear = Math.max(...projects.map((p) => Number(p.endDate.slice(0, 4))));
-  const start = Date.UTC(firstYear, 0, 1);
-  const end = Date.UTC(lastYear + 1, 0, 1);
+  // Timeline runs from the start of the first year to the end of the last one.
+  // In fiscal view, years are fiscal years (e.g. FY27 = Oct 2026 – Sep 2027).
+  const { periodView, fiscalStartMonth } = assumptions;
+  const fy = (iso: string) => (periodView === 'fiscal' ? fiscalYearOf(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), fiscalStartMonth) : Number(iso.slice(0, 4)));
+  const firstYear = Math.min(...projects.map((p) => fy(p.startDate)));
+  const lastYear = Math.max(...projects.map((p) => fy(p.endDate)));
+  const start = yearStart(firstYear, periodView, fiscalStartMonth);
+  const end = yearStart(lastYear + 1, periodView, fiscalStartMonth);
   const pct = (t: number) => ((t - start) / (end - start)) * 100;
   const years = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => firstYear + i);
   const today = Date.now();
@@ -67,8 +71,8 @@ export default function RoadmapPage() {
           <div className="hidden md:block" />
           <div className="relative flex border-b border-moss-200 pb-1.5">
             {years.map((y) => (
-              <div key={y} className="num flex-1 text-[12px] font-medium text-moss-600">
-                {y}
+              <div key={y} className="flex-1 text-[12px] font-medium text-moss-600">
+                <YearLabel year={y} />
               </div>
             ))}
           </div>

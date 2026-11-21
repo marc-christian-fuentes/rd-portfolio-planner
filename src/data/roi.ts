@@ -19,7 +19,10 @@ export interface RoiRow {
   cogs: number;
   grossProfit: number;
   savings: number;
+  /** R&D cost at today's department rates (the typed budget × rate index). */
   rdCost: number;
+  /** The part of rdCost caused by department rate changes (0 when rates are unchanged). */
+  rdRateChange: number;
   /** Cost of new hires on this project this year (proposed or approved). */
   hireCost: number;
   opex: number;
@@ -55,8 +58,11 @@ export function discountFactor(waccPct: number, t: number, convention: DiscountC
 /**
  * @param hireCosts optional extra R&D cost per model year from new hires
  *   ($ thousands), which lowers the cash flow and NPV.
+ * @param rdRateIndex how far department rates have moved since the R&D
+ *   budget was entered (1 = unchanged, 1.1 = rates 10% higher). The typed
+ *   R&D budget is scaled by it.
  */
-export function computeRoi(model: RoiModel, hireCosts?: number[]): RoiResult {
+export function computeRoi(model: RoiModel, hireCosts?: number[], rdRateIndex = 1): RoiResult {
   let cumulative = 0;
   const rows: RoiRow[] = model.years.map((y, i) => {
     const t = i + 1;
@@ -64,7 +70,8 @@ export function computeRoi(model: RoiModel, hireCosts?: number[]): RoiResult {
     const cogs = revenue * (1 - y.marginPct / 100);
     const grossProfit = revenue - cogs;
     const hireCost = hireCosts?.[i] ?? 0;
-    const netCashFlow = grossProfit + y.savings - y.rdCost - hireCost - y.opex;
+    const rdCost = y.rdCost * rdRateIndex;
+    const netCashFlow = grossProfit + y.savings - rdCost - hireCost - y.opex;
     const df = discountFactor(model.waccPct, t, model.convention);
     const presentValue = netCashFlow * df;
     cumulative += presentValue;
@@ -75,7 +82,8 @@ export function computeRoi(model: RoiModel, hireCosts?: number[]): RoiResult {
       cogs,
       grossProfit,
       savings: y.savings,
-      rdCost: y.rdCost,
+      rdCost,
+      rdRateChange: rdCost - y.rdCost,
       hireCost,
       opex: y.opex,
       netCashFlow,

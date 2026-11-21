@@ -11,7 +11,7 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { accessFor, canCreateProject } from '../data/access';
+import { accessFor, canCreateProject, fiscalYearOf, yearLabel } from '../data/access';
 import { formatMoney } from '../data/model';
 import {
   annualAmount,
@@ -26,7 +26,7 @@ import {
   rateOf,
 } from '../data/resourcing';
 import type { Granularity, Project } from '../data/types';
-import { useApp } from '../store';
+import { rateIndexFor, useApp } from '../store';
 import { KpiStrip, PageHeader, Panel, right, table, td, th } from '../components/ui';
 import { FilterSelect, useQueryParam } from '../components/Filters';
 import { NumberInput } from '../components/NumberInput';
@@ -411,7 +411,7 @@ const GRANULARITIES: { value: Granularity; label: string }[] = [
 
 /** Labour by person, non-labour lines and hires, as a yearly run-rate. */
 function CostsPanel({ project }: { project: Project }) {
-  const { data, role, allocations, costLines, hires, roiModels, addCostLine, updateCostLine, removeCostLine } = useApp();
+  const { data, role, allocations, costLines, hires, roiModels, assumptions, addCostLine, updateCostLine, removeCostLine } = useApp();
   const canEdit = accessFor(role, 'resourcing') === 'edit';
   const labour = allocations.filter((a) => a.projectId === project.id);
   const lines = costLines.filter((c) => c.projectId === project.id);
@@ -422,9 +422,13 @@ function CostsPanel({ project }: { project: Project }) {
   const hireTotal = projectHires.reduce((s, h) => s + hireAnnualCost(h, data.departments), 0);
   const total = labourTotal + otherTotal + hireTotal;
 
-  const year = new Date().getFullYear();
+  // This year (a fiscal year in fiscal view), and its R&D budget at today's department rates.
+  const now = new Date();
+  const year =
+    assumptions.periodView === 'fiscal' ? fiscalYearOf(now.getFullYear(), now.getMonth() + 1, assumptions.fiscalStartMonth) : now.getFullYear();
   const model = roiModels[project.id];
-  const budgetK = model ? model.years[year - model.startYear]?.rdCost : undefined;
+  const typedK = model ? model.years[year - model.startYear]?.rdCost : undefined;
+  const budgetK = typedK === undefined ? undefined : typedK * rateIndexFor({ data, allocations }, project.id);
 
   const section = (label: string, colSpan = 5) => (
     <tr>
@@ -563,7 +567,7 @@ function CostsPanel({ project }: { project: Project }) {
       </div>
       {budgetK !== undefined && (
         <p className="border-t border-moss-200 px-4 py-2.5 text-[12px] text-moss-600">
-          ROI model R&amp;D budget for {year}: <span className="num font-medium">{formatMoney(budgetK * 1000)}</span>. This bottom-up run-rate is{' '}
+          ROI model R&amp;D budget for {yearLabel(year, assumptions.periodView)}: <span className="num font-medium">{formatMoney(budgetK * 1000)}</span>. This bottom-up run-rate is{' '}
           <span className={`num font-medium ${total > budgetK * 1000 ? 'text-rust' : 'text-moss-800'}`}>
             {formatMoney(Math.abs(total - budgetK * 1000))} {total > budgetK * 1000 ? 'over' : 'under'}
           </span>

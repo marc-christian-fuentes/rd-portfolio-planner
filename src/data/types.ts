@@ -303,6 +303,10 @@ export interface Assumptions {
   fiscalStartMonth: number;
   /** Show years as fiscal (FY27) or calendar (2027). */
   periodView: 'fiscal' | 'calendar';
+  /** Portfolio discount rate. Changing it updates every project's ROI model. */
+  waccPct: number;
+  /** Portfolio discounting timing. Changing it updates every project's ROI model. */
+  convention: DiscountConvention;
   defaultGrossMarginPct: number;
   /** $ per unit per year for a new warranty. */
   defaultWarrantyPrice: number;

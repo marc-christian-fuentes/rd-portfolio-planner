@@ -5,8 +5,8 @@
  * flow model. Product managers can create and edit models for their own
  * projects; every figure recalculates live. Other roles see it read-only.
  */
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { canCreateProject, canEditRoi, visibleProjects } from '../data/access';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { accessFor, canCreateProject, canEditRoi, peopleForRole, visibleProjects } from '../data/access';
 import { durationMonths, formatDate, formatDay, personName, scheduleStatus } from '../data/model';
 import { MAX_YEARS, MIN_YEARS, formatK, type RoiResult, type RoiRow } from '../data/roi';
 import type { Project, RoiModel, RoiYear } from '../data/types';
@@ -23,7 +23,9 @@ import { NumberInput } from '../components/NumberInput';
 export default function RoiPage() {
   const { data, role, actingAsId } = useApp();
   const roiFor = useRoiFor();
-  const { projectId } = useParams();
+  // The project comes from the address: /project/prj-05 (or the older /project?project=prj-05).
+  const [searchParams] = useSearchParams();
+  const projectId = useParams().projectId ?? searchParams.get('project') ?? undefined;
   const navigate = useNavigate();
   const [phase] = usePhaseTab();
 
@@ -106,6 +108,36 @@ export default function RoiPage() {
   );
 }
 
+/**
+ * Explains why the model can't be edited, with a one-click switch to the
+ * person who can (the project's product manager).
+ */
+function ViewOnlyNote({ project }: { project: Project }) {
+  const { data, role, setRole, setActingAs } = useApp();
+  const owner = data.people.find((p) => p.id === project.ownerId);
+  const ownerIsPm = peopleForRole(data, 'Product Manager').some((p) => p.id === project.ownerId);
+  const canSetPortfolio = accessFor(role, 'assumptions') === 'edit';
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[10px] border border-moss-200 bg-sage-50 px-4 py-2.5 text-[13px] text-moss-800">
+      <span>
+        View only. In this demo, only the project’s product manager{owner ? ` (${owner.name})` : ''} edits its ROI model.
+        {canSetPortfolio ? ' You can change WACC and discounting for every project on the Assumptions page.' : ''}
+      </span>
+      {ownerIsPm && owner && (
+        <button
+          onClick={() => {
+            setRole('Product Manager');
+            setActingAs(owner.id);
+          }}
+          className="rounded-md bg-moss-800 px-3 py-1 text-[12px] font-medium text-white hover:bg-moss-700"
+        >
+          Edit as {owner.name.split(' ')[0]}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** The selected project's model, or a "create" prompt if it has none. */
 function ProjectRoi({ project }: { project: Project }) {
   const { data, role, actingAsId, roiModels, createRoiModel } = useApp();
@@ -124,6 +156,8 @@ function ProjectRoi({ project }: { project: Project }) {
           </span>
         )}
       </div>
+
+      {!canEdit && <ViewOnlyNote project={project} />}
 
       <Schedule project={project} />
 
@@ -368,6 +402,9 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
         ]
       : [{ label: 'Cost savings', input: 'savings', format: 'money', total: true }]),
     { label: 'R&D cost', input: 'rdCost', format: 'money', total: true, rule: true },
+    ...(result.rows.some((r) => Math.abs(r.rdRateChange) >= 0.5)
+      ? [{ label: 'R&D rate change (from Assumptions)', calc: 'rdRateChange', format: 'money', total: true, negate: true }]
+      : []),
     ...(result.rows.some((r) => r.hireCost >= 0.5)
       ? [{ label: 'New hires (from resourcing)', calc: 'hireCost', format: 'money', total: true, negate: true }]
       : []),

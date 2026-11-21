@@ -56,6 +56,39 @@ export function labourCostPerYear(projectId: string, allocations: Allocation[], 
     }, 0);
 }
 
+/**
+ * How far department rates have moved for one project since its R&D budget
+ * was entered: today's cost of its people's hours ÷ their cost at the
+ * original rates. 1 = unchanged; 1.2 = 20% dearer. Weighted by the hours
+ * each department puts into the project (or, for a project with nobody
+ * allocated, by each department's headcount).
+ */
+export function rdRateIndex(
+  projectId: string,
+  allocations: Allocation[],
+  people: Person[],
+  departments: Department[],
+  baseDepartments: Department[],
+): number {
+  const weights = new Map<string, number>();
+  const add = (deptId: string | null, hours: number) => deptId && weights.set(deptId, (weights.get(deptId) ?? 0) + hours);
+  for (const a of allocations.filter((x) => x.projectId === projectId)) {
+    const person = people.find((p) => p.id === a.personId);
+    if (person) add(person.departmentId, (person.capacityHoursPerYear * a.percent) / 100);
+  }
+  if (weights.size === 0) people.forEach((p) => add(p.departmentId, p.capacityHoursPerYear));
+
+  let now = 0;
+  let base = 0;
+  weights.forEach((hours, deptId) => {
+    const current = rateOf(departments, deptId);
+    const original = baseDepartments.find((d) => d.id === deptId)?.ratePerHour ?? current;
+    now += hours * current;
+    base += hours * original;
+  });
+  return base > 0 ? now / base : 1;
+}
+
 export function hireAnnualCost(hire: ProposedHire, departments: Department[]): number {
   return hire.hours * rateOf(departments, hire.departmentId);
 }

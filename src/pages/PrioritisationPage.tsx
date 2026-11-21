@@ -27,18 +27,20 @@ import { formatK } from '../data/roi';
 import { useApp, useRoiFor } from '../store';
 import { PageHeader, Panel, PhaseMarker, Tag } from '../components/ui';
 import { PlanStatus } from '../components/PlanStatus';
+import { useQuarterName } from '../components/YearLabel';
 import { CommentToggle } from '../components/CommentThread';
 
 export default function PrioritisationPage() {
   const { plan, role } = useApp();
+  const qn = useQuarterName();
   const [compare, setCompare] = useState<CompareState | null>(null);
   const ranking = canRank(role, plan.stage);
 
   return (
     <>
       <PageHeader
-        title={`Prioritisation · ${plan.quarter}`}
-        subtitle={`Rank the quarter’s projects, commit resources, adjust and publish. Arrows show movement since ${PREVIOUS_QUARTER.quarter}.`}
+        title={`Prioritisation · ${qn(plan.quarter)}`}
+        subtitle={`Rank the quarter’s projects, commit resources, adjust and publish. Arrows show movement since ${qn(PREVIOUS_QUARTER.quarter)}.`}
       />
       <PlanStatus />
 

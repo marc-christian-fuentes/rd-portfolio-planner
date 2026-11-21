@@ -24,7 +24,7 @@ export default function AssumptionsPage() {
 
   const defaults: { key: 'defaultGrossMarginPct' | 'defaultWarrantyPrice' | 'defaultAttachRatePct' | 'defaultRetentionPct'; label: string; unit: string; note: string }[] = [
     { key: 'defaultGrossMarginPct', label: 'Gross margin', unit: '%', note: 'Used for new ROI models when a project has no margin of its own.' },
-    { key: 'defaultWarrantyPrice', label: 'Warranty price', unit: '$ / yr', note: 'Default yearly price for a new warranty programme.' },
+    { key: 'defaultWarrantyPrice', label: 'Warranty price', unit: '$ / yr', note: 'Pre-fills the yearly price when you create a new recurring (warranty or subscription) project.' },
     { key: 'defaultAttachRatePct', label: 'Attach rate', unit: '%', note: 'Starting attach rate for new linked subscription or warranty plans.' },
     { key: 'defaultRetentionPct', label: 'Retention', unit: '%', note: 'Starting yearly renewal rate for new linked plans.' },
   ];
@@ -77,12 +77,53 @@ export default function AssumptionsPage() {
             </div>
           </div>
           <p className="border-t border-moss-200 px-4 py-2.5 text-[12px] text-moss-600">
-            Example: {yearLabel(sampleYear, 'fiscal')} runs {fiscalRange(sampleYear, a.fiscalStartMonth)}. In fiscal view, every yearly column in
-            ROI, Forecast, Platform and Sales tables is labelled this way, and each model’s yearly figures are treated as fiscal years.
+            Example: {yearLabel(sampleYear, 'fiscal')} runs {fiscalRange(sampleYear, a.fiscalStartMonth)}. Each model’s yearly figures are fiscal
+            years. In fiscal view, the ROI, Forecast, Platform and Sales tables, the Roadmap timeline and the planning quarters all use fiscal names,
+            and monthly sales plans run from the first fiscal month, {MONTHS[a.fiscalStartMonth - 1]}.
           </p>
         </Panel>
 
-        <Panel title="Departments" aside={<span className="text-[12px] text-moss-500">Rates feed labour and hire costs straight away</span>}>
+        <Panel title="Discounting" aside={<span className="text-[12px] text-moss-500">Applies to every project’s ROI model</span>}>
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 px-4 py-3">
+            <label className={field}>
+              WACC
+              {canEdit ? (
+                <NumberInput ariaLabel="Portfolio WACC percent" value={a.waccPct} min={0} max={50} className="w-16" onChange={(v) => setAssumptions({ waccPct: v })} />
+              ) : (
+                <span className="num font-medium text-moss-900">{a.waccPct}</span>
+              )}
+              %
+            </label>
+            <div className={field}>
+              Cash flow timing
+              <div className="flex overflow-hidden rounded-md" role="group" aria-label="Portfolio discounting convention">
+                {(['mid-year', 'end-of-year'] as const).map((c) => {
+                  const on = a.convention === c;
+                  return (
+                    <button
+                      key={c}
+                      disabled={!canEdit}
+                      aria-pressed={on}
+                      onClick={() => setAssumptions({ convention: c })}
+                      className={`border px-2.5 py-1 text-[12px] first:rounded-l-md first:border-r-0 last:rounded-r-md disabled:cursor-default ${
+                        on ? 'border-moss-800 bg-moss-800 text-white' : 'border-moss-300 bg-white text-moss-700 hover:bg-moss-50'
+                      }`}
+                    >
+                      {c === 'mid-year' ? 'Mid-year' : 'End of year'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <p className="border-t border-moss-200 px-4 py-2.5 text-[12px] text-moss-600">
+            Changing either setting updates every project’s NPV, ROI, IRR and payback straight away. Mid-year treats each year’s cash as arriving
+            evenly through the year (discounted by t − 0.5 years); end of year treats it as arriving on the last day (t years). A product manager can
+            still fine-tune their own project on the Project view.
+          </p>
+        </Panel>
+
+        <Panel title="Departments" aside={<span className="text-[12px] text-moss-500">Rates feed labour, hire costs and every ROI model’s R&amp;D cost straight away</span>}>
           <div className="overflow-x-auto">
             <table className={table}>
               <thead>

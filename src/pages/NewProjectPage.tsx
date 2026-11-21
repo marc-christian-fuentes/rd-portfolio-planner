@@ -180,7 +180,13 @@ export default function NewProjectPage() {
                   {err('margin')}
                 </label>
                 <label className="flex items-center gap-2 text-[13px] text-moss-700 md:col-span-2">
-                  <input type="checkbox" className="size-4 accent-moss-700" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
+                  <input type="checkbox" className="size-4 accent-moss-700" checked={recurring}
+                    onChange={(e) => {
+                      setRecurring(e.target.checked);
+                      // Start a new warranty or subscription at Finance's default yearly price.
+                      if (e.target.checked && !price) setPrice(String(useApp.getState().assumptions.defaultWarrantyPrice));
+                    }}
+                  />
                   Recurring revenue (subscription or warranty), priced per year
                 </label>
               </>

@@ -9,6 +9,7 @@ import { formatK } from '../data/roi';
 import type { Phase, Project } from '../data/types';
 import { useApp, useRoiFor } from '../store';
 import { PHASE_TABS } from './PhaseTabs';
+import { useQuarterName } from './YearLabel';
 
 const SHORT: Record<Phase, string> = {
   Scoping: 'Scoping',
@@ -24,6 +25,7 @@ const CARD_LIMIT = 3;
 export function PipelineBoard({ projects }: { projects: Project[] }) {
   const data = useApp((s) => s.data);
   const plan = useApp((s) => s.plan);
+  const qn = useQuarterName();
   const roiFor = useRoiFor();
   // The latest published plan drives this view: committed projects show their priority.
   const published = plan.versions[plan.versions.length - 1];
@@ -62,9 +64,9 @@ export function PipelineBoard({ projects }: { projects: Project[] }) {
                           {planRank(p.id) && (
                             <span
                               className="num shrink-0 rounded-full bg-moss-800 px-1.5 py-px text-[10px] font-medium text-white"
-                              title={`Priority #${planRank(p.id)} in the published ${plan.quarter} plan`}
+                              title={`Priority #${planRank(p.id)} in the published ${qn(plan.quarter)} plan`}
                             >
-                              {plan.quarter.split(' ')[0]} #{planRank(p.id)}
+                              {qn(plan.quarter).split(' ').find((w) => w.startsWith('Q'))} #{planRank(p.id)}
                             </span>
                           )}
                         </div>

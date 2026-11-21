@@ -134,6 +134,11 @@ export const ROLE_SUMMARY: Record<Role, string> = {
   Admin: 'Manages users, role visibility and (mock) integrations.',
 };
 
+/** Product and project managers can add projects (spec section 10). */
+export function canCreateProject(role: Role): boolean {
+  return role === 'Product Manager' || role === 'Project Manager';
+}
+
 /** Only the product manager who owns a project can create or edit its ROI model. */
 export function canEditRoi(role: Role, personId: string, project: Project): boolean {
   return role === 'Product Manager' && project.ownerId === personId;

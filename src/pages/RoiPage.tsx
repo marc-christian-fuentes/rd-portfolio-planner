@@ -5,8 +5,8 @@
  * flow model. Product managers can create and edit models for their own
  * projects; every figure recalculates live. Other roles see it read-only.
  */
-import { useNavigate, useParams } from 'react-router-dom';
-import { canEditRoi, visibleProjects } from '../data/access';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { canCreateProject, canEditRoi, visibleProjects } from '../data/access';
 import { durationMonths, formatDate, formatDay, personName, scheduleStatus } from '../data/model';
 import { MAX_YEARS, MIN_YEARS, formatK, type RoiResult, type RoiRow } from '../data/roi';
 import type { Project, RoiModel, RoiYear } from '../data/types';
@@ -52,6 +52,11 @@ export default function RoiPage() {
         }
       >
         <HiresToggle />
+        {canCreateProject(role) && (
+          <Link to="/project/new" className="rounded-md border border-moss-300 bg-white px-3 py-1 text-[13px] text-moss-800 hover:bg-moss-50">
+            + New project
+          </Link>
+        )}
       </PageHeader>
 
       <Panel>

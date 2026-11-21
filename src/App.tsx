@@ -20,6 +20,7 @@ import PrioritisationPage from './pages/PrioritisationPage';
 import ManufacturingPage from './pages/ManufacturingPage';
 import AssumptionsPage from './pages/AssumptionsPage';
 import InboxPage from './pages/InboxPage';
+import NewProjectPage from './pages/NewProjectPage';
 import AdminPage from './pages/AdminPage';
 import { canSee, homePath, type SectionId } from './data/access';
 import { useApp } from './store';
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/platform" element={page('platform', <PlatformPage />)} />
           <Route path="/platform/:platformId" element={page('platform', <PlatformPage />)} />
           <Route path="/project" element={page('project', <RoiPage />)} />
+          <Route path="/project/new" element={page('project', <NewProjectPage />)} />
           <Route path="/project/:projectId" element={page('project', <RoiPage />)} />
           <Route path="/roi/*" element={<Navigate to="/project" replace />} />
 

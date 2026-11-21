@@ -21,7 +21,8 @@
 - **Forecast**: P&L and cash flow that feed the corporate plan.
 - **Roadmap**: every project on a timeline.
 - **Project management**
-  - Costs & resourcing: allocate people to projects, see staffing gaps, propose hires (Director → CTO → Finance approval), plan non-labour costs.
+  - Costs & resourcing: allocate people to projects, see staffing gaps, propose hires (Director → CTO → Finance approval), plan non-labour costs, add team members to departments.
+  - New project: product and project managers add projects, checked against the same rules as the data self-check.
   - Capacity: utilisation by department and person.
 - **Sales pipeline**: projects from Proposed onwards as a progress board; revenue plans by month, quarter or year with price overrides, and recurring subscriptions or warranty linked to hardware (attach and retention). Plans feed units and price into each project's ROI model.
 - **Quarterly planning**: Propose → Prioritise → Resource → Adjust → Publish, with every change in the plan's history.

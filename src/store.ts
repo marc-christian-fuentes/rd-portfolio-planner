@@ -12,7 +12,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { seed, seedAllocations, seedAssumptions, seedComments, seedCostLines } from './data/seed';
-import type { AppUser, Assumptions, Comment, CommentItemType, Department, Person } from './data/types';
+import type { AppUser, Assumptions, Comment, CommentItemType, Department, Person, Project } from './data/types';
 import { DEFAULT_ACCESS, applyAccessMatrix, type Access, type AccessMatrix, type SectionId } from './data/access';
 import type { Allocation, CostLine, Granularity, PlanStage, ProposedHire, QuarterlyPlan, RevenuePlan, Role, RoiModel, RoiYear, SeedData } from './data/types';
 import { PLAN_STAGES, seedPlan } from './data/planning';
@@ -27,7 +27,6 @@ import { inboxFor } from './data/inbox';
 
 const seededModels = seedRoiModels(seed.projects);
 const goalOf = (projectId: string) => seed.projects.find((p) => p.id === projectId)?.quarterlyGoal ?? '';
-const projectName = (projectId: string) => seed.projects.find((p) => p.id === projectId)?.name ?? projectId;
 
 /** Today's date in the viewer's own time zone, as YYYY-MM-DD. */
 const today = () => new Date().toLocaleDateString('en-CA');
@@ -108,7 +107,14 @@ interface AppState {
   markInboxSeen: (ids: string[]) => void;
   /** Restores every piece of demo data to how it started. */
   resetDemo: () => void;
+
+  /** Adds a project (spec section 10) and returns its id. */
+  addProject: (input: NewProjectInput) => string;
+  /** Adds a person to a department, reporting to the current project manager. */
+  addTeamMember: (input: { name: string; title: string; departmentId: string; capacityHoursPerYear: number }) => void;
 }
+
+export type NewProjectInput = Omit<Project, 'id' | 'approvalStatus' | 'businessCase'> & { businessCaseFile: string };
 
 /** What kind of person a new user is, from their role. */
 const KIND_FOR_ROLE: Record<Role, Person['kind']> = {
@@ -157,6 +163,9 @@ export const useApp = create<AppState>()(
         if (!current) return;
         set({ roiModels: { ...get().roiModels, [projectId]: { ...change(current), updatedAt: today() } } });
       };
+
+      /** A project's name, including projects added in the app. */
+      const projectName = (projectId: string) => get().data.projects.find((p) => p.id === projectId)?.name ?? projectId;
 
       /** Apply a change to the quarterly plan and log it, unless nothing changed. */
       const changePlan = (action: string, change: (p: QuarterlyPlan) => QuarterlyPlan) => {
@@ -325,7 +334,15 @@ export const useApp = create<AppState>()(
             const committed = [...p.committed.filter((id) => id !== pull.projectId), pull.projectId];
             const entries = p.entries.some((e) => e.projectId === pull.projectId)
               ? p.entries
-              : [...p.entries, { projectId: pull.projectId, goal: goalOf(pull.projectId), submittedBy: pull.proposedBy, submittedAt: pull.at }];
+              : [
+                  ...p.entries,
+                  {
+                    projectId: pull.projectId,
+                    goal: get().data.projects.find((x) => x.id === pull.projectId)?.quarterlyGoal ?? '',
+                    submittedBy: pull.proposedBy,
+                    submittedAt: pull.at,
+                  },
+                ];
             const version = p.versions.length + 1;
             return {
               ...p,
@@ -432,6 +449,41 @@ export const useApp = create<AppState>()(
             comments: [...get().comments, { id: newId('cm'), itemType, itemId, authorId: get().actingAsId, text, mentions, parentId, at: today() }],
           });
         },
+        // ---------- New projects and people ----------
+
+        addProject: ({ businessCaseFile, ...input }) => {
+          const id = newId('prj');
+          const project: Project = {
+            ...input,
+            id,
+            approvalStatus: input.phase === 'Scoping' ? 'Not submitted' : 'Pending',
+            businessCase: businessCaseFile.trim() ? { fileName: businessCaseFile.trim(), summary: input.description } : null,
+          };
+          const data = get().data;
+          // The owner and the project manager can see their new project straight away.
+          const users = data.users.map((u) =>
+            (u.personId === project.ownerId && u.role === 'Product Manager') || (u.personId === project.projectManagerId && u.role === 'Project Manager')
+              ? { ...u, visibleProjectIds: [...u.visibleProjectIds, id] }
+              : u,
+          );
+          set({ data: { ...data, projects: [...data.projects, project], users } });
+          return id;
+        },
+
+        addTeamMember: ({ name, title, departmentId, capacityHoursPerYear }) => {
+          const data = get().data;
+          const person: Person = {
+            id: newId('r'),
+            name,
+            title,
+            kind: 'resource',
+            departmentId,
+            managerId: get().actingAsId,
+            capacityHoursPerYear,
+          };
+          set({ data: { ...data, people: [...data.people, person] } });
+        },
+
         markInboxSeen: (ids) => {
           const me = get().actingAsId;
           const seen = new Set([...(get().inboxSeen[me] ?? []), ...ids]);
@@ -463,6 +515,7 @@ export const useApp = create<AppState>()(
         inboxSeen: s.inboxSeen,
         integrations: s.integrations,
         // Editable parts of the base data
+        projects: s.data.projects,
         departments: s.data.departments,
         people: s.data.people,
         users: s.data.users,
@@ -502,13 +555,14 @@ export const useApp = create<AppState>()(
       },
       // Saved departments, people and users go back inside `data`; the saved access matrix is applied.
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<AppState> & { departments?: Department[]; people?: Person[]; users?: AppUser[] };
-        const { departments, people, users, ...rest } = p;
+        const p = (persisted ?? {}) as Partial<AppState> & { projects?: Project[]; departments?: Department[]; people?: Person[]; users?: AppUser[] };
+        const { projects, departments, people, users, ...rest } = p;
         const merged: AppState = {
           ...current,
           ...rest,
           data: {
             ...current.data,
+            projects: projects ?? current.data.projects,
             departments: departments ?? current.data.departments,
             people: people ?? current.data.people,
             users: users ?? current.data.users,

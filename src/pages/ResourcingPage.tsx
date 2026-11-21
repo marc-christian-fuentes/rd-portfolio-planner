@@ -10,7 +10,8 @@
  * Approvers (Leadership, CTO, Finance) also see hires waiting on them.
  */
 import { useState } from 'react';
-import { accessFor } from '../data/access';
+import { Link } from 'react-router-dom';
+import { accessFor, canCreateProject } from '../data/access';
 import { formatMoney } from '../data/model';
 import {
   annualAmount,
@@ -58,6 +59,13 @@ export default function ResourcingPage() {
       <PageHeader
         title="Costs & resourcing"
         subtitle="Assign your team to projects, close staffing gaps with proposed hires, and see what each project costs per year."
+        aside={
+          canCreateProject(role) && (
+            <Link to="/project/new" className="rounded-md border border-moss-300 bg-white px-3 py-1 text-[13px] text-moss-800 hover:bg-moss-50">
+              + New project
+            </Link>
+          )
+        }
       >
         {role !== 'Project Manager' && (
           <FilterSelect label="Project manager" value={pjm} onChange={setPjm} options={pms.map((p) => ({ value: p.id, label: p.name }))} />
@@ -93,6 +101,8 @@ export default function ResourcingPage() {
           { label: 'Unfilled gap / yr', value: hrs(openGap) },
         ]}
       />
+
+      {role === 'Project Manager' && <AddTeamMember />}
 
       <Panel title="Team allocation" aside={<span className="text-[12px] text-moss-500">% of each person’s year, per project</span>}>
         {projects.length === 0 ? (
@@ -186,6 +196,86 @@ export default function ResourcingPage() {
 
       {selected && <ProjectDetail key={selected.id} project={selected} />}
     </>
+  );
+}
+
+/** A project manager adds a person to a department on their team (spec section 10). */
+function AddTeamMember() {
+  const { data, addTeamMember } = useApp();
+  const rdDepartments = data.departments.filter((d) => d.id !== 'dept-prod');
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [title, setTitle] = useState('');
+  const [departmentId, setDepartmentId] = useState(rdDepartments[0]?.id ?? '');
+  const [hours, setHours] = useState(rdDepartments[0]?.capacityHoursPerYear ?? 1600);
+  const [done, setDone] = useState('');
+  const control = 'rounded-md border border-moss-300 bg-white px-2 py-1 text-[13px]';
+
+  if (!open) {
+    return (
+      <div className="mb-3 flex items-center gap-3">
+        <button onClick={() => setOpen(true)} className="text-[13px] font-medium text-moss-700 hover:text-moss-900">
+          + Add team member
+        </button>
+        {done && (
+          <span className="text-[12px] text-moss-600" role="status">
+            {done}
+          </span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="mb-4 rounded-[10px] border border-dashed border-moss-300 bg-white p-3">
+      <div className="mb-2 text-[13px] font-semibold text-moss-900">Add a team member</div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-[12px] text-moss-600">
+          Name
+          <input className={`${control} w-44`} value={name} onChange={(e) => setName(e.target.value)} placeholder="Sam Rivera" />
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-moss-600">
+          Title
+          <input className={`${control} w-44`} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Firmware Engineer" />
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-moss-600">
+          Department
+          <select
+            className={control}
+            value={departmentId}
+            onChange={(e) => {
+              setDepartmentId(e.target.value);
+              setHours(data.departments.find((d) => d.id === e.target.value)?.capacityHoursPerYear ?? 1600);
+            }}
+          >
+            {rdDepartments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-moss-600">
+          Hours / yr
+          <NumberInput ariaLabel="Capacity hours per year" value={hours} min={0} max={3000} className="w-20" onChange={setHours} />
+        </label>
+        <button
+          disabled={!name.trim() || !title.trim() || hours <= 0}
+          onClick={() => {
+            addTeamMember({ name: name.trim(), title: title.trim(), departmentId, capacityHoursPerYear: hours });
+            setDone(`${name.trim()} added to your team. Allocate them to a project below.`);
+            setName('');
+            setTitle('');
+            setOpen(false);
+          }}
+          className="rounded-md bg-moss-800 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-moss-700 disabled:opacity-40"
+        >
+          Add
+        </button>
+        <button onClick={() => setOpen(false)} className="text-[12px] text-moss-600 underline hover:text-moss-900">
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 

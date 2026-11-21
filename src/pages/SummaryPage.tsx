@@ -17,6 +17,7 @@ import { useApp, useRoiFor } from '../store';
 import { KpiStrip, PageHeader, Panel, Tag, right, table, td, th } from '../components/ui';
 import { HiresToggle, PmFilter, byPm, usePmFilter, useQueryParam } from '../components/Filters';
 import { PipelineBoard } from '../components/PipelineBoard';
+import { ExportPicker } from '../components/ExportButton';
 
 interface Group {
   key: string;
@@ -62,7 +63,11 @@ export default function SummaryPage() {
 
   return (
     <>
-      <PageHeader title="Portfolio summary" subtitle="Every product platform side by side. Lifetime totals from each project’s ROI model, in $ thousands.">
+      <PageHeader
+        title="Portfolio summary"
+        subtitle="Every product platform side by side. Lifetime totals from each project’s ROI model, in $ thousands."
+        aside={<ExportPicker projects={projects} />}
+      >
         <PmFilter />
         <HiresToggle />
         <div className="flex items-center gap-2 text-[13px] text-moss-600">

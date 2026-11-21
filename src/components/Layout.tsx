@@ -5,7 +5,7 @@
  * only lists the pages the current role may see, and the page on the right.
  */
 import { Fragment } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ROLES, type Role } from '../data/types';
 import { ROLE_SUMMARY, SECTIONS, canSee, peopleForRole } from '../data/access';
 import { useApp, useInbox } from '../store';
@@ -23,7 +23,8 @@ const selectClass =
   'rounded-md border border-moss-600 bg-moss-700 px-2 py-1 text-[13px] text-white focus:outline focus:outline-2 focus:outline-sage-300';
 
 export default function Layout() {
-  const { data, role, actingAsId, setRole, setActingAs } = useApp();
+  const { data, role, actingAsId, setRole, setActingAs, resetDemo } = useApp();
+  const navigate = useNavigate();
   const actors = peopleForRole(data, role);
   // Keep the open phase tab and the product manager filter when moving between pages.
   const [phase] = usePhaseTab();
@@ -52,6 +53,18 @@ export default function Layout() {
               ))}
             </select>
           </label>
+
+          <button
+            onClick={() => {
+              if (window.confirm('Reset the demo? Every change made in this browser goes back to the original demo data.')) {
+                resetDemo();
+                navigate('/');
+              }
+            }}
+            className="order-last rounded-md border border-moss-600 px-2.5 py-1 text-[12px] text-sage-200 hover:bg-moss-700 hover:text-white"
+          >
+            Reset demo
+          </button>
 
           {actors.length > 1 ? (
             <label className="flex items-center gap-2 text-[13px] text-sage-200">

@@ -7,7 +7,7 @@
  * Built with the "zustand" library.
  *
  * Everything you can edit is saved in the browser, so it survives a page
- * refresh. (The Reset demo button comes in step 7.9.)
+ * refresh. The "Reset demo" button puts it all back to the starting data.
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -106,6 +106,8 @@ interface AppState {
   syncIntegration: (which: 'hr' | 'erp') => void;
   addComment: (comment: { itemType: CommentItemType; itemId: string; text: string; parentId: string | null }) => void;
   markInboxSeen: (ids: string[]) => void;
+  /** Restores every piece of demo data to how it started. */
+  resetDemo: () => void;
 }
 
 /** What kind of person a new user is, from their role. */
@@ -119,6 +121,28 @@ const KIND_FOR_ROLE: Record<Role, Person['kind']> = {
   Manufacturing: 'staff',
   Admin: 'staff',
 };
+/** The demo's starting data. Used when the app first opens and by "Reset demo". */
+function initialState() {
+  return {
+    data: seed,
+    role: 'Leadership' as Role,
+    actingAsId: 'ldr-ceo',
+    roiModels: seededModels,
+    allocations: seedAllocations,
+    costLines: seedCostLines,
+    hires: seed.hires,
+    includePendingHires: true,
+    revenuePlans: seedRevenuePlans(seed.projects, seededModels),
+    plan: seedPlan(goalOf),
+    unitCosts: seedUnitCosts,
+    assumptions: seedAssumptions,
+    accessMatrix: DEFAULT_ACCESS,
+    comments: seedComments,
+    inboxSeen: {} as Record<string, string[]>,
+    integrations: { hrLastSync: '2026-11-20 06:00', erpLastSync: '2026-11-19 23:30' },
+  };
+}
+
 const nowStamp = () => {
   const d = new Date();
   return `${d.toLocaleDateString('en-CA')} ${d.toTimeString().slice(0, 5)}`;
@@ -143,22 +167,12 @@ export const useApp = create<AppState>()(
       };
 
       return {
-        data: seed,
-        role: 'Leadership',
-        actingAsId: 'ldr-ceo',
-        roiModels: seededModels,
-        allocations: seedAllocations,
-        costLines: seedCostLines,
-        hires: seed.hires,
-        includePendingHires: true,
-        revenuePlans: seedRevenuePlans(seed.projects, seededModels),
-        plan: seedPlan(goalOf),
-        unitCosts: seedUnitCosts,
-        assumptions: seedAssumptions,
-        accessMatrix: DEFAULT_ACCESS,
-        comments: seedComments,
-        inboxSeen: {},
-        integrations: { hrLastSync: '2026-11-20 06:00', erpLastSync: '2026-11-19 23:30' },
+        ...initialState(),
+
+        resetDemo: () => {
+          applyAccessMatrix(DEFAULT_ACCESS);
+          set(initialState());
+        },
 
         setRole: (role) => set({ role, actingAsId: peopleForRole(get().data, role)[0]?.id ?? '' }),
         setActingAs: (actingAsId) => set({ actingAsId }),

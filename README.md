@@ -28,6 +28,8 @@
 - **Inbox**: mentions, replies and approvals waiting on you, with an unread count. Comments with @mentions and replies sit on projects, sales plans, hires and plan entries.
 - **Assumptions**: fiscal year start and fiscal/calendar labels, editable departments (rates feed costs), default revenue settings.
 - **Admin**: add users and set what product and project managers can see; an editable role visibility matrix; mock HR and ERP integrations.
+- **Excel export**: one project (Project view) or a chosen set (Summary) as a workbook with live formulas: WACC and mid-year discounting are input cells, and revenue, COGS, cash flow, discount factors, NPV, discounted ROI and IRR recalculate in Excel. A summary sheet links to each project. Checked against an independent spreadsheet engine: all 676 formulas match the app.
+- **Reset demo** (top bar): restores all the original demo data.
 - **Unit cost builder**: Manufacturing itemises each hardware product (component, type, quantity, unit cost). Once a breakdown exists it replaces the gross margin estimate in revenue and ROI everywhere, with a badge showing which COGS method is in use.
 
 ## Where things live
@@ -50,4 +52,4 @@
 - [x] 6. Quarterly planning (Rank by comparing)
 - [x] 7. Manufacturing unit cost builder
 - [x] 8. Assumptions, admin, comments and inbox
-- [ ] 9. Excel export and Reset demo
+- [x] 9. Excel export and Reset demo

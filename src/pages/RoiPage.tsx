@@ -14,6 +14,7 @@ import { effectiveModel, useApp, useRoiFor } from '../store';
 import { unitCostOf } from '../data/unitcost';
 import { YearLabel } from '../components/YearLabel';
 import { CommentThread } from '../components/CommentThread';
+import { ExportButton } from '../components/ExportButton';
 import { HiresToggle } from '../components/Filters';
 import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
 import { PhaseTabs, usePhaseTab, withPhase } from '../components/PhaseTabs';
@@ -211,6 +212,9 @@ function ModelView({ project, model, canEdit }: { project: Project; model: RoiMo
           { label: 'Discounted payback', value: result.paybackYears != null ? `${result.paybackYears.toFixed(1)} yrs` : 'Beyond horizon' },
         ]}
       />
+      <div className="mb-3 flex justify-end">
+        <ExportButton projectIds={[project.id]} />
+      </div>
       <div className="space-y-4">
         <Assumptions project={project} model={model} canEdit={canEdit} />
         <CashFlowTable project={project} model={model} result={result} canEdit={canEdit} />

@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+/* Same palette and type as greenlight.: dark olive, light green, DM Sans. */
+@theme {
+  --font-sans: 'DM Sans Variable', 'Segoe UI', sans-serif;
+  --color-moss-50: #f4f5f0;
+  --color-moss-100: #e8eadf;
+  --color-moss-200: #d7dacb;
+  --color-moss-300: #bfc3ad;
+  --color-moss-500: #6b7558;
+  --color-moss-600: #4f6a2c;
+  --color-moss-700: #3c5222;
+  --color-moss-800: #263419;
+  --color-moss-900: #1a2112;
+  --color-sage-100: #e3eed6;
+  --color-sage-200: #cfe0bb;
+  --color-sage-300: #b2cc94;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-moss-50 font-sans text-moss-900 antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

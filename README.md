@@ -1,5 +1,7 @@
 # greenlight.
 
+**Live demo: https://rd-portfolio-planner.vercel.app** (no sign-up; switch roles with “View as” at the top)
+
 **R&D investment planning.** A portfolio demo showing how R&D, project management, sales, manufacturing and leadership plan from one shared project and ROI model. All data is fake. Full spec: `R&D Portfolio Planner – Prototype Spec.md`.
 
 ## Run it on your computer

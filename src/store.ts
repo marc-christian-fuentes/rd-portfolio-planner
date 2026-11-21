@@ -11,7 +11,9 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { seed, seedAllocations, seedCostLines } from './data/seed';
+import { seed, seedAllocations, seedAssumptions, seedComments, seedCostLines } from './data/seed';
+import type { AppUser, Assumptions, Comment, CommentItemType, Department, Person } from './data/types';
+import { DEFAULT_ACCESS, applyAccessMatrix, type Access, type AccessMatrix, type SectionId } from './data/access';
 import type { Allocation, CostLine, Granularity, PlanStage, ProposedHire, QuarterlyPlan, RevenuePlan, Role, RoiModel, RoiYear, SeedData } from './data/types';
 import { PLAN_STAGES, seedPlan } from './data/planning';
 import { applyUnitCost, seedUnitCosts, unitCostOf } from './data/unitcost';
@@ -21,12 +23,14 @@ import { MAX_YEARS, MIN_YEARS, computeRoi, createDefaultRoiModel, seedRoiModels 
 import { currentStep, hireCostsForModel, nextStatus } from './data/resourcing';
 import { applyRevenuePlan, convertGranularity, createRevenuePlan, enteredForYear, seedRevenuePlans } from './data/revenue';
 import type { RoiLookup } from './data/rollup';
+import { inboxFor } from './data/inbox';
 
 const seededModels = seedRoiModels(seed.projects);
 const goalOf = (projectId: string) => seed.projects.find((p) => p.id === projectId)?.quarterlyGoal ?? '';
 const projectName = (projectId: string) => seed.projects.find((p) => p.id === projectId)?.name ?? projectId;
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** Today's date in the viewer's own time zone, as YYYY-MM-DD. */
+const today = () => new Date().toLocaleDateString('en-CA');
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}`;
 
 interface AppState {
@@ -47,6 +51,14 @@ interface AppState {
   plan: QuarterlyPlan;
   /** Manufacturing's per-unit cost breakdowns, all products. */
   unitCosts: UnitCostItem[];
+  assumptions: Assumptions;
+  /** Which sections each role can see or edit (Admin can change it). */
+  accessMatrix: AccessMatrix;
+  comments: Comment[];
+  /** Inbox notification ids each person has already seen. */
+  inboxSeen: Record<string, string[]>;
+  /** Mock integrations: when each last synced. */
+  integrations: { hrLastSync: string; erpLastSync: string };
 
   setRole: (role: Role) => void;
   setActingAs: (personId: string) => void;
@@ -83,7 +95,34 @@ interface AppState {
   updateUnitCostItem: (id: string, patch: Partial<Pick<UnitCostItem, 'component' | 'category' | 'quantity' | 'unitCost'>>) => void;
   removeUnitCostItem: (id: string) => void;
   clearUnitCost: (projectId: string) => void;
+
+  setAssumptions: (patch: Partial<Assumptions>) => void;
+  updateDepartment: (id: string, patch: Partial<Omit<Department, 'id'>>) => void;
+  addDepartment: () => void;
+  addUser: (user: { name: string; role: Role; visibleProjectIds: string[] }) => void;
+  updateUser: (personId: string, patch: Partial<Omit<AppUser, 'personId'>>) => void;
+  setAccessCell: (section: SectionId, role: Role, access: Access | null) => void;
+  resetAccess: () => void;
+  syncIntegration: (which: 'hr' | 'erp') => void;
+  addComment: (comment: { itemType: CommentItemType; itemId: string; text: string; parentId: string | null }) => void;
+  markInboxSeen: (ids: string[]) => void;
 }
+
+/** What kind of person a new user is, from their role. */
+const KIND_FOR_ROLE: Record<Role, Person['kind']> = {
+  Leadership: 'leader',
+  CTO: 'leader',
+  Finance: 'leader',
+  'Product Manager': 'product-manager',
+  'Project Manager': 'project-manager',
+  Sales: 'staff',
+  Manufacturing: 'staff',
+  Admin: 'staff',
+};
+const nowStamp = () => {
+  const d = new Date();
+  return `${d.toLocaleDateString('en-CA')} ${d.toTimeString().slice(0, 5)}`;
+};
 
 export const useApp = create<AppState>()(
   persist(
@@ -115,6 +154,11 @@ export const useApp = create<AppState>()(
         revenuePlans: seedRevenuePlans(seed.projects, seededModels),
         plan: seedPlan(goalOf),
         unitCosts: seedUnitCosts,
+        assumptions: seedAssumptions,
+        accessMatrix: DEFAULT_ACCESS,
+        comments: seedComments,
+        inboxSeen: {},
+        integrations: { hrLastSync: '2026-11-20 06:00', erpLastSync: '2026-11-19 23:30' },
 
         setRole: (role) => set({ role, actingAsId: peopleForRole(get().data, role)[0]?.id ?? '' }),
         setActingAs: (actingAsId) => set({ actingAsId }),
@@ -122,7 +166,9 @@ export const useApp = create<AppState>()(
         createRoiModel: (projectId) => {
           const project = get().data.projects.find((p) => p.id === projectId);
           if (!project || get().roiModels[projectId]) return;
-          set({ roiModels: { ...get().roiModels, [projectId]: createDefaultRoiModel(project, get().actingAsId, today()) } });
+          // Projects without their own margin use the default from Assumptions.
+          const withMargin = project.grossMarginPct == null ? { ...project, grossMarginPct: get().assumptions.defaultGrossMarginPct } : project;
+          set({ roiModels: { ...get().roiModels, [projectId]: createDefaultRoiModel(withMargin, get().actingAsId, today()) } });
         },
 
         updateRoiModel: (projectId, patch) => editModel(projectId, (m) => ({ ...m, ...patch })),
@@ -180,7 +226,9 @@ export const useApp = create<AppState>()(
         createRevenuePlan: (projectId) => {
           const project = get().data.projects.find((p) => p.id === projectId);
           if (!project || get().revenuePlans[projectId]) return;
-          set({ revenuePlans: { ...get().revenuePlans, [projectId]: createRevenuePlan(project, get().roiModels[projectId]) } });
+          const a = get().assumptions;
+          const plan = { ...createRevenuePlan(project, get().roiModels[projectId]), attachRatePct: a.defaultAttachRatePct, retentionPct: a.defaultRetentionPct };
+          set({ revenuePlans: { ...get().revenuePlans, [projectId]: plan } });
         },
         updateRevenuePlan: (projectId, patch) => {
           const plan = get().revenuePlans[projectId];
@@ -307,6 +355,75 @@ export const useApp = create<AppState>()(
         removeUnitCostItem: (id) => set({ unitCosts: get().unitCosts.filter((i) => i.id !== id) }),
         clearUnitCost: (projectId) => set({ unitCosts: get().unitCosts.filter((i) => i.projectId !== projectId) }),
 
+        // ---------- Assumptions ----------
+
+        setAssumptions: (patch) => set({ assumptions: { ...get().assumptions, ...patch } }),
+        updateDepartment: (id, patch) =>
+          set({ data: { ...get().data, departments: get().data.departments.map((d) => (d.id === id ? { ...d, ...patch } : d)) } }),
+        addDepartment: () =>
+          set({
+            data: {
+              ...get().data,
+              departments: [...get().data.departments, { id: newId('dept'), name: 'New department', ratePerHour: 90, capacityHoursPerYear: 1600 }],
+            },
+          }),
+
+        // ---------- Admin ----------
+
+        addUser: ({ name, role, visibleProjectIds }) => {
+          const kind = KIND_FOR_ROLE[role];
+          const person: Person = {
+            id: newId('usr'),
+            name,
+            title: role,
+            kind,
+            departmentId: kind === 'product-manager' ? 'dept-prod' : kind === 'project-manager' ? 'dept-pt' : null,
+            managerId: null,
+            capacityHoursPerYear: kind === 'product-manager' || kind === 'project-manager' ? 1600 : 0,
+          };
+          const data = get().data;
+          set({
+            data: {
+              ...data,
+              people: [...data.people, person],
+              users: [...data.users, { personId: person.id, role, visibleProjectIds }],
+            },
+          });
+        },
+        updateUser: (personId, patch) =>
+          set({ data: { ...get().data, users: get().data.users.map((u) => (u.personId === personId ? { ...u, ...patch } : u)) } }),
+        setAccessCell: (section, role, access) => {
+          if (section === 'admin' && role === 'Admin') return; // never lock Admin out
+          const matrix: AccessMatrix = { ...get().accessMatrix, [section]: { ...get().accessMatrix[section] } };
+          if (access) matrix[section][role] = access;
+          else delete matrix[section][role];
+          applyAccessMatrix(matrix);
+          set({ accessMatrix: matrix });
+        },
+        resetAccess: () => {
+          applyAccessMatrix(DEFAULT_ACCESS);
+          set({ accessMatrix: DEFAULT_ACCESS });
+        },
+        syncIntegration: (which) =>
+          set({ integrations: { ...get().integrations, [which === 'hr' ? 'hrLastSync' : 'erpLastSync']: nowStamp() } }),
+
+        // ---------- Comments and inbox ----------
+
+        addComment: ({ itemType, itemId, text, parentId }) => {
+          const lower = text.toLowerCase();
+          const mentions = get()
+            .data.people.filter((p) => lower.includes(`@${p.name.toLowerCase()}`))
+            .map((p) => p.id);
+          set({
+            comments: [...get().comments, { id: newId('cm'), itemType, itemId, authorId: get().actingAsId, text, mentions, parentId, at: today() }],
+          });
+        },
+        markInboxSeen: (ids) => {
+          const me = get().actingAsId;
+          const seen = new Set([...(get().inboxSeen[me] ?? []), ...ids]);
+          set({ inboxSeen: { ...get().inboxSeen, [me]: [...seen] } });
+        },
+
         setPlanGranularity: (projectId, granularity, years) => {
           const plan = get().revenuePlans[projectId];
           if (!plan || plan.granularity === granularity) return;
@@ -321,11 +438,20 @@ export const useApp = create<AppState>()(
     },
     {
       name: 'rdpp-session',
-      version: 7,
+      version: 8,
       partialize: (s) => ({
         revenuePlans: s.revenuePlans,
         plan: s.plan,
         unitCosts: s.unitCosts,
+        assumptions: s.assumptions,
+        accessMatrix: s.accessMatrix,
+        comments: s.comments,
+        inboxSeen: s.inboxSeen,
+        integrations: s.integrations,
+        // Editable parts of the base data
+        departments: s.data.departments,
+        people: s.data.people,
+        users: s.data.users,
         role: s.role,
         actingAsId: s.actingAsId,
         roiModels: s.roiModels,
@@ -351,7 +477,31 @@ export const useApp = create<AppState>()(
           plan: version < 6 || !s.plan ? seedPlan(goalOf) : s.plan,
           // Version 7 added unit cost breakdowns.
           unitCosts: s.unitCosts ?? seedUnitCosts,
-        } as AppState;
+          // Version 8 added assumptions, admin, comments and the inbox.
+          assumptions: s.assumptions ?? seedAssumptions,
+          accessMatrix: s.accessMatrix ?? DEFAULT_ACCESS,
+          comments: s.comments ?? seedComments,
+          inboxSeen: s.inboxSeen ?? {},
+          integrations: s.integrations ?? { hrLastSync: '2026-11-20 06:00', erpLastSync: '2026-11-19 23:30' },
+          // (Saved departments, people and users, if any, pass through to `merge` below.)
+        } as never;
+      },
+      // Saved departments, people and users go back inside `data`; the saved access matrix is applied.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AppState> & { departments?: Department[]; people?: Person[]; users?: AppUser[] };
+        const { departments, people, users, ...rest } = p;
+        const merged: AppState = {
+          ...current,
+          ...rest,
+          data: {
+            ...current.data,
+            departments: departments ?? current.data.departments,
+            people: people ?? current.data.people,
+            users: users ?? current.data.users,
+          },
+        };
+        applyAccessMatrix(merged.accessMatrix ?? DEFAULT_ACCESS);
+        return merged;
       },
     },
   ),
@@ -385,6 +535,20 @@ export function effectiveModel(state: ModelState, projectId: string): RoiModel |
   const unitCost = unitCostOf(state.unitCosts, projectId);
   if (unitCost !== null) model = applyUnitCost(model, unitCost);
   return model;
+}
+
+/** The current person's inbox, with which items are still unread. */
+export function useInbox() {
+  const data = useApp((s) => s.data);
+  const role = useApp((s) => s.role);
+  const me = useApp((s) => s.actingAsId);
+  const comments = useApp((s) => s.comments);
+  const hires = useApp((s) => s.hires);
+  const plan = useApp((s) => s.plan);
+  const seen = useApp((s) => s.inboxSeen[me]);
+  const items = inboxFor(me, role, { data, comments, hires, plan });
+  const seenSet = new Set(seen ?? []);
+  return { items, unread: items.filter((i) => !seenSet.has(i.id)), isUnread: (id: string) => !seenSet.has(id) };
 }
 
 /** Linked plans need the hardware units for the plan's years. */

@@ -27,6 +27,7 @@ import { formatK } from '../data/roi';
 import { useApp, useRoiFor } from '../store';
 import { PageHeader, Panel, PhaseMarker, Tag } from '../components/ui';
 import { PlanStatus } from '../components/PlanStatus';
+import { CommentToggle } from '../components/CommentThread';
 
 export default function PrioritisationPage() {
   const { plan, role } = useApp();
@@ -192,6 +193,9 @@ function RankedList() {
                     {committed ? 'Committed' : 'Not resourced'}
                   </label>
                 )}
+              </div>
+              <div className="col-start-3 md:col-span-5" draggable={false} onDragStart={(e) => e.stopPropagation()}>
+                <CommentToggle itemType="plan-entry" itemId={id} />
               </div>
             </li>
           );

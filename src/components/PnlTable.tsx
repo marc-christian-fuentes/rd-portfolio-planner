@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import { formatAccounting, type Pnl, type PnlYear } from '../data/rollup';
 import { Panel, right, table, td as baseTd, th as baseTh } from './ui';
+import { YearLabel } from './YearLabel';
 
 // Slightly tighter cells than other tables, so a 7–8 year P&L fits without scrolling.
 const td = baseTd.replace('px-3', 'px-2');
@@ -66,7 +67,7 @@ export function PnlTable({ pnl, title, aside }: { pnl: Pnl; title: string; aside
               <th className={`${th} min-w-[150px] pl-3`}>Line item</th>
               {pnl.years.map((y) => (
                 <th key={y.year} className={`${th} ${right} num`}>
-                  {y.year}
+                  <YearLabel year={y.year} />
                 </th>
               ))}
               <th className={`${th} ${right} border-l border-moss-200`}>Total</th>

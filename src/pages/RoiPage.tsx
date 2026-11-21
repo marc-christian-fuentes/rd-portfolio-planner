@@ -12,6 +12,8 @@ import { MAX_YEARS, MIN_YEARS, formatK, type RoiResult, type RoiRow } from '../d
 import type { Project, RoiModel, RoiYear } from '../data/types';
 import { effectiveModel, useApp, useRoiFor } from '../store';
 import { unitCostOf } from '../data/unitcost';
+import { YearLabel } from '../components/YearLabel';
+import { CommentThread } from '../components/CommentThread';
 import { HiresToggle } from '../components/Filters';
 import { KpiStrip, PageHeader, Panel, PhaseMarker, Tag, right, table, td, th } from '../components/ui';
 import { PhaseTabs, usePhaseTab, withPhase } from '../components/PhaseTabs';
@@ -138,6 +140,10 @@ function ProjectRoi({ project }: { project: Project }) {
       ) : (
         <ModelView project={project} model={model} canEdit={canEdit} />
       )}
+
+      <div className="mt-6 max-w-3xl">
+        <CommentThread itemType="project" itemId={project.id} title="Project comments" />
+      </div>
     </section>
   );
 }
@@ -393,7 +399,7 @@ function CashFlowTable({ project, model, result, canEdit }: { project: Project; 
               <th className={`${th} sticky left-0 min-w-[190px]`}>Line item</th>
               {result.rows.map((r, i) => (
                 <th key={r.year} className={`${th} ${right}`}>
-                  <span className="num">{r.year}</span>
+                  <YearLabel year={r.year} />
                   <span className="ml-1 font-normal text-moss-500">Y{i + 1}</span>
                 </th>
               ))}

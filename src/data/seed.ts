@@ -5,7 +5,7 @@
  * 3 product platforms, 15 projects spread across every phase,
  * 6 departments and 30 people (shaped like an HR system feed).
  */
-import type { Allocation, CostLine, Department, Person, Platform, Project, ProposedHire, SeedData } from './types';
+import type { Allocation, AppUser, Assumptions, Comment, CostLine, Department, Person, Platform, Project, ProposedHire, SeedData } from './types';
 
 // ---------- Product platforms ----------
 
@@ -456,7 +456,102 @@ const hires: ProposedHire[] = [
   },
 ];
 
-export const seed: SeedData = { platforms, departments, people, projects, hires };
+// ---------- Users: everyone who can use the app, and what they see ----------
+// Product managers see the projects they own; project managers the ones they run.
+
+const users: AppUser[] = [
+  { personId: 'ldr-ceo', role: 'Leadership', visibleProjectIds: [] },
+  { personId: 'ldr-dir', role: 'Leadership', visibleProjectIds: [] },
+  { personId: 'ldr-cto', role: 'CTO', visibleProjectIds: [] },
+  { personId: 'ldr-fin', role: 'Finance', visibleProjectIds: [] },
+  { personId: 'stf-sales', role: 'Sales', visibleProjectIds: [] },
+  { personId: 'stf-mfg', role: 'Manufacturing', visibleProjectIds: [] },
+  { personId: 'stf-admin', role: 'Admin', visibleProjectIds: [] },
+  ...people
+    .filter((p) => p.kind === 'product-manager')
+    .map((p) => ({ personId: p.id, role: 'Product Manager' as const, visibleProjectIds: projects.filter((x) => x.ownerId === p.id).map((x) => x.id) })),
+  ...people
+    .filter((p) => p.kind === 'project-manager')
+    .map((p) => ({ personId: p.id, role: 'Project Manager' as const, visibleProjectIds: projects.filter((x) => x.projectManagerId === p.id).map((x) => x.id) })),
+];
+
+export const seed: SeedData = { platforms, departments, people, projects, hires, users };
+
+// ---------- Assumptions ----------
+
+export const seedAssumptions: Assumptions = {
+  fiscalStartMonth: 1,
+  periodView: 'calendar',
+  defaultGrossMarginPct: 40,
+  defaultWarrantyPrice: 35,
+  defaultAttachRatePct: 72,
+  defaultRetentionPct: 80,
+};
+
+// ---------- Comments ----------
+
+export const seedComments: Comment[] = [
+  {
+    id: 'cm-1',
+    itemType: 'project',
+    itemId: 'prj-11',
+    authorId: 'pdm-3',
+    text: 'Second prototype thermal results look good. @Ingrid Solberg can we confirm the certification lab slot for January?',
+    mentions: ['pjm-3'],
+    parentId: null,
+    at: '2026-11-14',
+  },
+  {
+    id: 'cm-2',
+    itemType: 'project',
+    itemId: 'prj-11',
+    authorId: 'pjm-3',
+    text: 'Booked for January 12. @Chloe Dubois I’ll share the test plan this week.',
+    mentions: ['pdm-3'],
+    parentId: 'cm-1',
+    at: '2026-11-15',
+  },
+  {
+    id: 'cm-3',
+    itemType: 'plan-entry',
+    itemId: 'prj-06',
+    authorId: 'pdm-4',
+    text: 'Leak detection dropped two places since Q4. @Tom Okafor could you share the reasoning?',
+    mentions: ['ldr-dir'],
+    parentId: null,
+    at: '2026-11-16',
+  },
+  {
+    id: 'cm-4',
+    itemType: 'hire',
+    itemId: 'hire-2',
+    authorId: 'pjm-2',
+    text: '@Tom Okafor this AI hire unblocks the 90% accuracy goal for Q1.',
+    mentions: ['ldr-dir'],
+    parentId: null,
+    at: '2026-11-06',
+  },
+  {
+    id: 'cm-5',
+    itemType: 'revenue-plan',
+    itemId: 'prj-11',
+    authorId: 'stf-sales',
+    text: 'Launch price set to $379 after distributor feedback. @Raj Mehta FYI for the forecast.',
+    mentions: ['ldr-fin'],
+    parentId: null,
+    at: '2026-11-18',
+  },
+  {
+    id: 'cm-6',
+    itemType: 'project',
+    itemId: 'prj-05',
+    authorId: 'pdm-2',
+    text: '@Diego Alvarez can we get the updated valve body quote into the unit cost?',
+    mentions: ['stf-mfg'],
+    parentId: null,
+    at: '2026-11-19',
+  },
+];
 
 // ---------- Allocations: % of each person's year given to each project ----------
 // Some people are deliberately left with spare time, and one (Pavel Novak) is

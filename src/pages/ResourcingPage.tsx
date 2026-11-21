@@ -261,7 +261,7 @@ function ProposeHireForm({ project, gap }: { project: Project; gap: number }) {
   const nextMonth = new Date();
   nextMonth.setMonth(nextMonth.getMonth() + 1, 1);
   const [departmentId, setDepartmentId] = useState(rdDepartments[0].id);
-  const [startDate, setStartDate] = useState(nextMonth.toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(nextMonth.toLocaleDateString('en-CA'));
   const [hours, setHours] = useState(Math.min(1600, Math.max(100, Math.round(gap / 100) * 100)));
   const [sent, setSent] = useState(false);
   const cost = hours * rateOf(data.departments, departmentId);

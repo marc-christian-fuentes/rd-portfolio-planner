@@ -8,7 +8,7 @@ import { Fragment } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ROLES, type Role } from '../data/types';
 import { ROLE_SUMMARY, SECTIONS, canSee, peopleForRole } from '../data/access';
-import { useApp } from '../store';
+import { useApp, useInbox } from '../store';
 import { usePhaseTab, withPhase } from './PhaseTabs';
 import { APP_NAME, APP_TAGLINE } from '../config';
 import { Logo } from './Logo';
@@ -28,6 +28,7 @@ export default function Layout() {
   // Keep the open phase tab and the product manager filter when moving between pages.
   const [phase] = usePhaseTab();
   const { search } = useLocation();
+  const unreadCount = useInbox().unread.length;
 
   return (
     <div className="min-h-screen">
@@ -92,6 +93,11 @@ export default function Layout() {
                   >
                     {s.group && <span className="md:hidden">{s.group}: </span>}
                     {s.label}
+                    {s.id === 'inbox' && unreadCount > 0 && (
+                      <span className="num ml-2 rounded-full bg-moss-700 px-1.5 py-px text-[11px] font-medium text-white" aria-label={`${unreadCount} unread`}>
+                        {unreadCount}
+                      </span>
+                    )}
                   </NavLink>
                 </Fragment>
               );

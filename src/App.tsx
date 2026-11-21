@@ -18,8 +18,9 @@ import SalesPage from './pages/SalesPage';
 import SubmissionPage from './pages/SubmissionPage';
 import PrioritisationPage from './pages/PrioritisationPage';
 import ManufacturingPage from './pages/ManufacturingPage';
+import AssumptionsPage from './pages/AssumptionsPage';
+import InboxPage from './pages/InboxPage';
 import AdminPage from './pages/AdminPage';
-import PlaceholderPage from './pages/PlaceholderPage';
 import { canSee, homePath, type SectionId } from './data/access';
 import { useApp } from './store';
 
@@ -29,14 +30,13 @@ function Guard({ section, children }: { section: SectionId; children: ReactNode 
 }
 
 const page = (section: SectionId, element: ReactNode) => <Guard section={section}>{element}</Guard>;
-const placeholder = (section: SectionId) => page(section, <PlaceholderPage section={section} />);
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/inbox" element={placeholder('inbox')} />
+          <Route path="/inbox" element={page('inbox', <InboxPage />)} />
 
           {/* Portfolio */}
           <Route path="/" element={page('summary', <SummaryPage />)} />
@@ -61,7 +61,7 @@ export default function App() {
           <Route path="/capacity" element={page('capacity', <CapacityPage />)} />
 
           <Route path="/sales" element={page('sales', <SalesPage />)} />
-          <Route path="/assumptions" element={placeholder('assumptions')} />
+          <Route path="/assumptions" element={page('assumptions', <AssumptionsPage />)} />
           <Route path="/admin" element={page('admin', <AdminPage />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

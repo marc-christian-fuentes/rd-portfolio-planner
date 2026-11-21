@@ -272,15 +272,42 @@ export interface QuarterlyPlan {
   history: PlanEvent[];
 }
 
+export type CommentItemType = 'project' | 'cost-line' | 'revenue-plan' | 'hire' | 'plan-entry';
+
+/** A comment on any item, with @mentions and replies (spec section 11). */
 export interface Comment {
   id: string;
-  itemType: 'project' | 'cost-line' | 'revenue-plan' | 'hire' | 'plan-entry';
+  itemType: CommentItemType;
   itemId: string;
   authorId: string;
   text: string;
+  /** Person ids mentioned with @Name. */
   mentions: string[];
+  /** The comment this replies to, or null for a new thread. */
   parentId: string | null;
   at: ISODate;
+}
+
+/** A user account (no real logins in the demo). */
+export interface AppUser {
+  /** The person this user is (also their id in the role switcher). */
+  personId: string;
+  role: Role;
+  /** Projects a product or project manager can see. Other roles see per their role. */
+  visibleProjectIds: string[];
+}
+
+/** Planning assumptions (spec section 9). */
+export interface Assumptions {
+  /** Month the fiscal year starts, 1 = January. */
+  fiscalStartMonth: number;
+  /** Show years as fiscal (FY27) or calendar (2027). */
+  periodView: 'fiscal' | 'calendar';
+  defaultGrossMarginPct: number;
+  /** $ per unit per year for a new warranty. */
+  defaultWarrantyPrice: number;
+  defaultAttachRatePct: number;
+  defaultRetentionPct: number;
 }
 
 export type CostCategory = 'Materials' | 'Labour' | 'Overhead & logistics';
@@ -303,6 +330,8 @@ export interface SeedData {
   departments: Department[];
   people: Person[];
   projects: Project[];
-  /** Proposed hires; full workflow arrives in step 7.4. */
+  /** Proposed hires (the starting set). */
   hires: ProposedHire[];
+  /** User accounts and the projects each can see. */
+  users: AppUser[];
 }

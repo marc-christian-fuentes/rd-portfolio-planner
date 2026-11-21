@@ -13,6 +13,7 @@ import { useApp, useRoiFor } from '../store';
 import { KpiStrip, PageHeader, Panel, right, table, td, th } from '../components/ui';
 import { FilterSelect, HiresToggle, PmFilter, byPm, usePmFilter, useQueryParam } from '../components/Filters';
 import { PnlTable } from '../components/PnlTable';
+import { YearLabel } from '../components/YearLabel';
 
 export default function ForecastPage() {
   const { data, role, actingAsId } = useApp();
@@ -65,7 +66,7 @@ export default function ForecastPage() {
                     <th className={`${th} min-w-[200px]`}>Project</th>
                     {pnl.years.map((y) => (
                       <th key={y.year} className={`${th} ${right} num`}>
-                        {y.year}
+                        <YearLabel year={y.year} />
                       </th>
                     ))}
                     <th className={`${th} ${right} border-l border-moss-200`}>Total</th>

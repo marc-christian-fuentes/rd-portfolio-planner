@@ -27,6 +27,8 @@ import { FilterSelect, useQueryParam } from '../components/Filters';
 import { PHASE_TABS } from '../components/PhaseTabs';
 import { NumberInput } from '../components/NumberInput';
 import { unitCostOf } from '../data/unitcost';
+import { YearLabel } from '../components/YearLabel';
+import { CommentThread } from '../components/CommentThread';
 
 const TENTATIVE: Phase[] = ['Proposed', 'Approved'];
 const int = (v: number) => Math.round(v).toLocaleString('en-US');
@@ -190,6 +192,9 @@ function RevenuePlanner({ project }: { project: Project }) {
     <>
       {header}
       <PlanEditor project={project} plan={plan} canEdit={canEdit} />
+      <div className="mt-6 max-w-3xl">
+        <CommentThread itemType="revenue-plan" itemId={project.id} title="Plan comments" />
+      </div>
     </>
   );
 }
@@ -421,7 +426,7 @@ function PlanEditor({ project, plan, canEdit }: { project: Project; plan: Revenu
                   <th className={`${th} min-w-[200px]`}>Line</th>
                   {rows.map((r) => (
                     <th key={r.year} className={`${th} ${right} num`}>
-                      {r.year}
+                      <YearLabel year={r.year} />
                     </th>
                   ))}
                   <th className={`${th} ${right} border-l border-moss-200`}>Total</th>

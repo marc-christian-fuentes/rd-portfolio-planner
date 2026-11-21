@@ -25,6 +25,9 @@
 - **Quarterly planning**: Propose → Prioritise → Resource → Adjust → Publish, with every change in the plan's history.
   - Project submission: product managers submit projects with their quarterly goal.
   - Prioritisation: drag and drop, or **Rank by comparing** (pick between two projects; a binary insertion sort builds the ranking from your choices); the CTO commits resources; the Director and CEO swap within the approved count; publish locks a version; mid-quarter pull-ins create new versions.
+- **Inbox**: mentions, replies and approvals waiting on you, with an unread count. Comments with @mentions and replies sit on projects, sales plans, hires and plan entries.
+- **Assumptions**: fiscal year start and fiscal/calendar labels, editable departments (rates feed costs), default revenue settings.
+- **Admin**: add users and set what product and project managers can see; an editable role visibility matrix; mock HR and ERP integrations.
 - **Unit cost builder**: Manufacturing itemises each hardware product (component, type, quantity, unit cost). Once a breakdown exists it replaces the gross margin estimate in revenue and ROI everywhere, with a badge showing which COGS method is in use.
 
 ## Where things live
@@ -46,5 +49,5 @@
 - [x] 5. Sales revenue (recurring and warranty)
 - [x] 6. Quarterly planning (Rank by comparing)
 - [x] 7. Manufacturing unit cost builder
-- [ ] 8. Assumptions, admin, comments and inbox
+- [x] 8. Assumptions, admin, comments and inbox
 - [ ] 9. Excel export and Reset demo

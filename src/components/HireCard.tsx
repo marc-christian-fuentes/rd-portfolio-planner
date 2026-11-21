@@ -7,6 +7,7 @@ import { formatDay, personName } from '../data/model';
 import { APPROVAL_STEPS, canDecide, hireAnnualCost } from '../data/resourcing';
 import type { ProposedHire } from '../data/types';
 import { useApp } from '../store';
+import { CommentToggle } from './CommentThread';
 
 const money = (v: number) => `$${Math.round(v).toLocaleString('en-US')}`;
 
@@ -81,7 +82,10 @@ export function HireCard({ hire, showProject = false }: { hire: ProposedHire; sh
         </div>
       )}
 
-      <details className="mt-2 text-[12px] text-moss-500">
+      <div className="mt-2">
+        <CommentToggle itemType="hire" itemId={hire.id} />
+      </div>
+      <details className="mt-1 text-[12px] text-moss-500">
         <summary className="cursor-pointer select-none">History</summary>
         <ul className="mt-1 space-y-0.5">
           {hire.history.map((h, i) => (
